@@ -4,6 +4,7 @@
 
 const STORAGE_KEY = "hdd-triage-drive-v1";
 const OS_KEY = "hdd-triage-os-v1";
+const THEME_KEY = "hdd-triage-theme-v1";
 
 const EMPTY = {
   DEVICE: "",
@@ -123,4 +124,27 @@ function detectOS() {
   if (ua.includes("win")) return "windows";
   if (ua.includes("mac")) return "macos";
   return "linux";
+}
+
+export function loadTheme() {
+  return localStorage.getItem(THEME_KEY) || detectTheme();
+}
+
+export function saveTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // ignore
+  }
+}
+
+function detectTheme() {
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: light)").matches
+  ) {
+    return "light";
+  }
+  return "dark";
 }

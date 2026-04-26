@@ -27,6 +27,8 @@ import {
   clearDrive,
   loadOS,
   saveOS,
+  loadTheme,
+  saveTheme,
   FIELD_LABELS,
   FIELD_HINTS,
   FIELD_KIND,
@@ -45,6 +47,8 @@ import { knowledge } from "./data/knowledge.js";
 let state = createState("technician");
 let drive = loadDrive();
 let osChoice = loadOS();
+let theme = loadTheme();
+document.documentElement.setAttribute("data-theme", theme);
 
 const els = {
   stage: document.getElementById("stage"),
@@ -59,6 +63,7 @@ const els = {
   remainCount: document.getElementById("remainCount"),
   totalCount: document.getElementById("totalCount"),
   modeSwitch: document.getElementById("modeSwitch"),
+  themeSwitch: document.getElementById("themeSwitch"),
   resetBtn: document.getElementById("resetBtn"),
   phaseLabel: document.getElementById("phaseLabel"),
   mapToggle: document.getElementById("mapToggle"),
@@ -1131,6 +1136,17 @@ els.osSwitch.addEventListener("click", (e) => {
   renderAll();
 });
 
+els.themeSwitch.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-theme]");
+  if (!btn) return;
+  theme = btn.dataset.theme;
+  saveTheme(theme);
+  document.documentElement.setAttribute("data-theme", theme);
+  for (const b of els.themeSwitch.querySelectorAll("button")) {
+    b.classList.toggle("active", b === btn);
+  }
+});
+
 els.driveBtn.addEventListener("click", () => openDrawer());
 els.drawerClose.addEventListener("click", closeDrawer);
 els.drawerOverlay.addEventListener("click", closeDrawer);
@@ -1159,6 +1175,11 @@ els.referenceOverlay.addEventListener("click", (e) => {
 // Set initial active OS button.
 for (const b of els.osSwitch.querySelectorAll("button")) {
   b.classList.toggle("active", b.dataset.os === osChoice);
+}
+
+// Set initial active theme button.
+for (const b of els.themeSwitch.querySelectorAll("button")) {
+  b.classList.toggle("active", b.dataset.theme === theme);
 }
 
 renderAll();

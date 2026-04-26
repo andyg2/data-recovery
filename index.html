@@ -8,11 +8,29 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    // Apply persisted (or system-preferred) theme before paint to avoid FOUC.
+    (function () {
+      try {
+        var t = localStorage.getItem("hdd-triage-theme-v1");
+        if (!t) {
+          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light" : "dark";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
   <style>
-    :root {
+    :root, html[data-theme="dark"] {
       --bg: #0e1116;
       --panel: #161a22;
       --panel-2: #1c2230;
+      --bg-deep: #0a0d12;
+      --bg-overlay-soft: rgba(14, 17, 22, 0.7);
+      --bg-overlay-strong: rgba(14, 17, 22, 0.92);
       --line: #2a3142;
       --line-bright: #3b475e;
       --ink: #e6eaf2;
@@ -31,6 +49,28 @@
       --shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 30px -10px rgba(0, 0, 0, 0.6);
       --mono: 'JetBrains Mono', ui-monospace, monospace;
       --sans: 'IBM Plex Sans', system-ui, sans-serif;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --panel-2: #f0f2f5;
+      --bg-deep: #eceef2;
+      --bg-overlay-soft: rgba(255, 255, 255, 0.78);
+      --bg-overlay-strong: rgba(247, 248, 250, 0.95);
+      --line: #dde2ea;
+      --line-bright: #c0c8d4;
+      --ink: #1a1f2a;
+      --ink-dim: #5b6473;
+      --ink-faint: #9099a8;
+      --accent: #16a34a;
+      --accent-dim: #bbf7d0;
+      --warn: #b45309;
+      --warn-dim: #fde68a;
+      --bad: #dc2626;
+      --bad-dim: #fecaca;
+      --info: #2563eb;
+      --shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 12px 30px -10px rgba(15, 23, 42, 0.18);
     }
 
     * {
@@ -62,7 +102,7 @@
       justify-content: space-between;
       padding: 14px 22px;
       border-bottom: 1px solid var(--line);
-      background: rgba(14, 17, 22, 0.7);
+      background: var(--bg-overlay-soft);
       backdrop-filter: blur(8px);
       position: sticky;
       top: 0;
@@ -576,7 +616,7 @@
     .map-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(14, 17, 22, 0.92);
+      background: var(--bg-overlay-strong);
       backdrop-filter: blur(6px);
       z-index: 100;
       display: none;
@@ -694,7 +734,7 @@
     }
 
     .cmd-block {
-      background: #0a0d12;
+      background: var(--bg-deep);
       border: 1px solid var(--line);
       margin-bottom: 10px;
       font-family: var(--mono);
@@ -1363,7 +1403,7 @@
     .drawer-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(14, 17, 22, 0.6);
+      background: var(--bg-overlay-soft);
       backdrop-filter: blur(4px);
       z-index: 90;
       display: none;
@@ -1602,13 +1642,35 @@
       border-color: var(--bad);
     }
 
-    .os-switch {
+    .os-switch, .theme-switch {
       display: flex;
       gap: 0;
       border: 1px solid var(--line-bright);
       font-family: var(--mono);
       font-size: 11px;
       margin-right: 10px;
+    }
+
+    .theme-switch button {
+      background: transparent;
+      color: var(--ink-dim);
+      border: none;
+      padding: 7px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    .theme-switch button.active {
+      background: var(--info);
+      color: var(--bg);
+      font-weight: 700;
+    }
+
+    .theme-switch button:hover:not(.active) {
+      color: var(--ink);
     }
 
     .os-switch button {
@@ -1686,6 +1748,10 @@
         <button data-os="windows">Windows</button>
         <button data-os="linux">Linux</button>
         <button data-os="macos">macOS</button>
+      </div>
+      <div class="theme-switch" id="themeSwitch">
+        <button data-theme="dark">Dark</button>
+        <button data-theme="light">Light</button>
       </div>
       <button class="drive-btn" id="driveBtn">Drive specifics <span id="driveStatus"></span></button>
       <button class="drive-btn" id="referenceBtn">Reference</button>
