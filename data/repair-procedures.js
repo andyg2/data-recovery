@@ -570,6 +570,782 @@ export const repairProcedures = {
       "50-70% when password is unknown but drive is consumer-grade with vendor-default master. Near 100% when the user remembers the password and just needs the drive unfrozen. Near 0% on SED/Opal with lost key.",
   },
 
+  external_drive_shuck: {
+    id: "external_drive_shuck",
+    name: "Shuck an external drive and connect bare to SATA",
+    when_used:
+      "Any external drive that's not detected, slow, or behaving oddly. The first thing to try - 80% of 'my external died' cases are a dead bridge with a healthy drive inside.",
+    difficulty: "easy",
+    time_estimate: "10-30 minutes",
+    environment: "normal-bench",
+    risk_to_data: "low",
+    parts: [
+      {
+        name: "(optional) Replacement enclosure - if you want to rehouse",
+        source: "Amazon, AliExpress (Sabrent, ORICO, Inateck)",
+        cost_usd: "10-25",
+        matching:
+          "Match the original drive's interface (SATA 3.5\" or 2.5\"). Avoid encrypted enclosures unless you specifically want encryption again.",
+      },
+    ],
+    tools: [
+      {
+        name: "Plastic spudgers / thin guitar picks (iFixit Pro Tech kit)",
+        cost_usd: "5-25",
+        alternative: "An old credit card slid along the seam works in a pinch",
+      },
+      {
+        name: "Phillips #00 / #1 driver",
+        cost_usd: "5",
+        alternative: "Most enclosures are clip-fit only, no screws",
+      },
+      {
+        name: "Desktop SATA + power, OR a known-good SATA-USB dock",
+        cost_usd: "0-30",
+        alternative: "",
+      },
+    ],
+    steps: [
+      {
+        label: "Photograph the enclosure and label",
+        detail:
+          "Note the model number printed on the bottom of the enclosure (not the drive's own model - the enclosure's). You'll need it if you discover hardware encryption and have to source a same-firmware donor bridge.",
+        risk: "low",
+      },
+      {
+        label: "Find the seam and start at one corner",
+        detail:
+          "Most enclosures have a snap-fit seam running the length of the case. Slide a spudger in at one corner and work it along - clips release with audible clicks.",
+        risk: "low",
+      },
+      {
+        label: "Disconnect the drive from the bridge PCB",
+        detail:
+          "The bridge is a small green PCB with a SATA edge-connector that mates with the drive. Pull straight - do not flex.",
+        risk: "low",
+      },
+      {
+        label: "KEEP THE BRIDGE",
+        detail:
+          "Put it in a labelled bag. WD MyBook/Easystore, Seagate Backup Plus, and many Toshiba enclosures encrypt the drive's contents using a key in the bridge's serial flash. Discarding it = losing the data even if the drive is fine.",
+        risk: "high",
+      },
+      {
+        label: "Connect the bare drive to a desktop SATA port",
+        detail:
+          "Open the case, plug in SATA data + SATA power. Or use a USB3 SATA dock. Boot the host.",
+        risk: "low",
+      },
+      {
+        label: "Inspect the data layer",
+        detail:
+          "If the drive IDs and a hex dump of LBA 0 shows MBR/GPT and filesystem signatures: the bridge was the only failure. Image as normal. If the data is uniform random noise: the bridge was encrypting; you'll need the original bridge or a same-firmware donor to decrypt.",
+        risk: "low",
+      },
+    ],
+    abort_signals: [
+      "Drive is glued or ultrasonically welded into the enclosure (rare on cheap units, more common on Apple's external Time Capsule HDDs) - prying may damage the drive.",
+      "Drive is USB-native (no SATA edge connector visible, soldered directly to the bridge) - you cannot rehouse via SATA.",
+      "Bridge has visible burn damage and the drive smells burnt - PCB on the drive itself may also be dead.",
+    ],
+    success_rate:
+      "85-95% restore-to-detection on non-encrypted enclosures. Drops to 30-50% on encrypted enclosures where the original bridge died.",
+  },
+
+  encrypted_bridge_key_recovery: {
+    id: "encrypted_bridge_key_recovery",
+    name: "Encrypted-enclosure bridge flash transplant",
+    when_used:
+      "Shucked drive reads as uniform random noise, the original USB-SATA bridge is dead or unreliable, and the user wants the data on the platters.",
+    difficulty: "moderate",
+    time_estimate: "1-3 hours",
+    environment: "normal-bench",
+    risk_to_data: "medium",
+    parts: [
+      {
+        name: "Same-firmware donor enclosure",
+        source:
+          "eBay (search by exact USB VID/PID + enclosure model) - WD bridges and Seagate Backup Plus bridges are listed individually too.",
+        cost_usd: "20-50",
+        matching:
+          "USB VID/PID must match (lsusb / Device Manager). For WD specifically, the firmware version (visible in WD Discovery / WD Drive Utilities) must also match - a different rev uses a different key derivation.",
+      },
+    ],
+    tools: [
+      {
+        name: "CH341A programmer with SOIC-8 clip (already in core toolkit)",
+        cost_usd: "8-15",
+        alternative: "Raspberry Pi with flashrom",
+      },
+      {
+        name: "Hot air rework station (if chip-off transfer is needed)",
+        cost_usd: "80-130",
+        alternative: "Fine-tip iron + flux for in-circuit clip read",
+      },
+      {
+        name: "USB protocol analyser (optional, for confirming bridge identity)",
+        cost_usd: "20-100",
+        alternative: "lsusb -v / USBView is enough for most cases",
+      },
+    ],
+    steps: [
+      {
+        label: "Confirm the encryption pattern",
+        detail:
+          "Hex dump the shucked drive's first 16 MB. Uniform high-entropy noise = bridge encryption. If you see normal filesystem structure, the bridge was NOT encrypting and you can stop here.",
+        risk: "low",
+      },
+      {
+        label: "Identify the bridge model and firmware",
+        detail:
+          "Read the chip markings on the bridge PCB. WD enclosures use Initio / JMicron / WD-custom. Seagate uses ASM/Initio. Note the chip part numbers. Plug into a working host briefly (if the bridge spins up) and read VID/PID.",
+        risk: "medium",
+      },
+      {
+        label: "Source a same-firmware donor",
+        detail:
+          "A donor enclosure of the SAME model AND firmware revision. eBay listings often include firmware in the description; if not, ask the seller. A wrong-firmware donor will spin up the drive but fail to decrypt.",
+        risk: "medium",
+      },
+      {
+        label: "Read the original bridge's serial flash",
+        detail:
+          "Locate the 8-pin SOIC SPI flash on the original bridge PCB. Clip the CH341A on (drive does not need to be powered). Read 3 times in NeoProgrammer; verify identical. Save as patient_bridge.bin.",
+        risk: "medium",
+      },
+      {
+        label: "Read the donor's flash for backup",
+        detail: "Same procedure on the donor. Save as donor_original.bin.",
+        risk: "low",
+      },
+      {
+        label: "Write patient flash to donor",
+        detail:
+          "Erase donor flash, write patient_bridge.bin, verify. The donor bridge now has the patient's encryption key.",
+        risk: "high",
+      },
+      {
+        label: "Reassemble: patient drive into donor enclosure with patched bridge",
+        detail:
+          "Connect the patient SATA drive to the donor's bridge. Plug into a USB host.",
+        risk: "medium",
+      },
+      {
+        label: "Image immediately to a target drive",
+        detail:
+          "Once decrypted-on-the-fly reads succeed, ddrescue to a separate target. Do not rely on the patched donor for long-term storage.",
+        risk: "low",
+      },
+    ],
+    abort_signals: [
+      "Original bridge flash reads as all-FF or all-00 - the key is gone, no recovery possible.",
+      "WD SmartWare 'set a password' was enabled and the password is forgotten - additional layer beyond the device key.",
+      "Donor refuses to enumerate the patient drive after flash transfer - firmware mismatch, find a closer donor.",
+    ],
+    success_rate:
+      "60-80% with a same-firmware donor. Near 0% if the original bridge flash was destroyed and no matching donor is findable.",
+  },
+
+  encryption_key_recovery: {
+    id: "encryption_key_recovery",
+    name: "Recover host-side encryption keys",
+    when_used:
+      "Drive is healthy but every sector is BitLocker, FileVault, LUKS, or similar. User has lost the password / no recovery key handy.",
+    difficulty: "easy",
+    time_estimate: "15 minutes to several hours of searching",
+    environment: "normal-bench",
+    risk_to_data: "low",
+    parts: [],
+    tools: [
+      { name: "Linux live USB with cryptsetup, dislocker", cost_usd: "0", alternative: "" },
+      { name: "Microsoft account access", cost_usd: "0", alternative: "" },
+      { name: "Apple ID / iCloud access", cost_usd: "0", alternative: "" },
+    ],
+    steps: [
+      {
+        label: "Identify the encryption layer",
+        detail:
+          "Hex dump the partition header. '-FVE-FS-' = BitLocker. 'LUKS' = LUKS1/2. 'encrdsa' or APFS-encrypted = FileVault. Random with no header = VeraCrypt or pre-Vista BitLocker.",
+        risk: "low",
+      },
+      {
+        label: "BitLocker: check Microsoft account",
+        detail:
+          "https://account.microsoft.com/devices/recoverykey lists every BitLocker recovery key for every device signed into the account. Windows 11 Home enables Device Encryption automatically and stashes the key here.",
+        risk: "low",
+      },
+      {
+        label: "BitLocker: check the AD domain",
+        detail:
+          "If the device was domain-joined, the recovery key is escrowed in AD. The user's IT admin can retrieve it from Active Directory Users and Computers > BitLocker tab.",
+        risk: "low",
+      },
+      {
+        label: "BitLocker: check a printed copy",
+        detail:
+          "BitLocker setup prompts users to save / print the key. Check email, Drive, Dropbox, OneDrive, and anywhere the user might have stashed a 48-digit numeric string.",
+        risk: "low",
+      },
+      {
+        label: "FileVault: check iCloud key escrow",
+        detail:
+          "If the user enabled iCloud unlock, the FileVault key is recoverable via Apple's account recovery. macOS Recovery > Disk Utility > Unlock with Apple ID.",
+        risk: "low",
+      },
+      {
+        label: "LUKS: check for keyfiles",
+        detail:
+          "Many LUKS setups use a keyfile (USB token, ~/.luks-keys, /etc/cryptsetup-keys.d). Ask the user where the system was supposed to find the key on boot.",
+        risk: "low",
+      },
+      {
+        label: "Mount and image with the recovered key",
+        detail:
+          "BitLocker on Linux: dislocker. LUKS: cryptsetup luksOpen. FileVault: native macOS unlock. Image the unlocked plaintext volume with ddrescue.",
+        risk: "low",
+      },
+    ],
+    abort_signals: [
+      "VeraCrypt with a forgotten passphrase and no keyfile - brute force is the only path and is infeasible on strong passphrases.",
+      "TPM-bound BitLocker on a motherboard that also died - the TPM-sealed key is gone with the TPM.",
+      "FileVault with no Apple ID escrow and no recovery key written down - unrecoverable.",
+    ],
+    success_rate:
+      "95%+ when the key is findable in Microsoft account / iCloud / AD. Near 0% when truly lost. The DIY value is preventing wasted lab spend - no lab can break AES-256 either.",
+  },
+
+  format_recognition: {
+    id: "format_recognition",
+    name: "Identify and mount foreign on-disk formats",
+    when_used:
+      "Drive enumerates and SMART is clean, but the host shows 'You need to format' or 'Foreign disk' or 'Unallocated'. Almost always a format the current OS doesn't natively understand.",
+    difficulty: "easy",
+    time_estimate: "30 minutes - 2 hours",
+    environment: "normal-bench",
+    risk_to_data: "medium",
+    parts: [],
+    tools: [
+      { name: "Linux live USB (Ubuntu / SystemRescue / Hiren's PE)", cost_usd: "0", alternative: "" },
+      {
+        name: "TestDisk + PhotoRec (read-only signature scan)",
+        cost_usd: "0",
+        alternative: "",
+      },
+      {
+        name: "UFS Explorer Professional or R-Studio (proprietary RAID)",
+        cost_usd: "150-400",
+        alternative: "Free trial reads enough to verify the format",
+      },
+    ],
+    steps: [
+      {
+        label: "STOP - do not click any 'initialize' / 'format' / 'repair' prompt",
+        detail:
+          "Windows aggressively prompts to initialize unrecognized disks. Clicking 'Yes' overwrites the GPT/MBR with a fresh empty one. The data is recoverable only if you stop here.",
+        risk: "high",
+      },
+      {
+        label: "Hex dump LBA 0 and look at the first few sectors",
+        detail:
+          "Identify: GPT signature 'EFI PART' at LBA 1, MBR boot code, RAID metadata (DDF, mdadm magic 0xA92B4EFC, LVM 'LABELONE', ZFS 'ZBB ZBB'), Apple Core Storage / APFS containers, or unfamiliar filesystem magic.",
+        risk: "low",
+      },
+      {
+        label: "RAID member: identify the array type and assemble read-only",
+        detail:
+          "Linux: `mdadm --examine /dev/sdX` shows mdadm metadata. `pvdisplay` shows LVM. `zpool import -o readonly=on -N <pool>` for ZFS. Hardware RAID often needs UFS Explorer RAID Edition.",
+        risk: "medium",
+      },
+      {
+        label: "4Kn drive on a 512n host",
+        detail:
+          "If `hdparm -I` shows 'Logical Sector size: 4096 bytes' but the host is treating it as 512-byte, swap to a UASP-capable USB3 dock or a host with a modern AHCI controller.",
+        risk: "low",
+      },
+      {
+        label: "Apple Fusion / APFS",
+        detail:
+          "Connect to a Mac. Disk Utility > View > Show All Devices. Fusion drives need both halves; if the SSD half is dead, the APFS metadata is split and recovery requires UFS Explorer or R-Studio with APFS support.",
+        risk: "medium",
+      },
+      {
+        label: "HFS+ Time Machine on Windows",
+        detail:
+          "Use HFSExplorer (free, read-only) or Paragon HFS+ for Windows. Or move the drive to a Mac.",
+        risk: "low",
+      },
+      {
+        label: "GPT from a different OS",
+        detail:
+          "GPT itself is cross-platform. If Windows says the disk is foreign but `gdisk -l` on Linux shows valid partitions, the issue is just driver/filesystem - mount each partition with the right tools.",
+        risk: "low",
+      },
+      {
+        label: "Image read-only before any non-trivial mounting",
+        detail:
+          "ddrescue clone first. Then experiment with the clone, never the original.",
+        risk: "low",
+      },
+    ],
+    abort_signals: [
+      "User has already clicked 'Initialize' / 'Format' / 'Repair' in Windows - the partition table may be overwritten. From here it's logical_corruption, treat as such.",
+      "Hardware RAID with proprietary metadata that no open tool recognises (some old 3Ware, Adaptec firmwares) - escalate to UFS Explorer RAID Edition or a recovery service.",
+      "Fusion drive where the SSD half is gone and no APFS-aware tool reads the HDD half cleanly - escalate.",
+    ],
+    success_rate:
+      "85-95% when the format is identified and a compatible host is available. Drops sharply for proprietary RAID with lost configuration.",
+  },
+
+  thermal_window_imaging: {
+    id: "thermal_window_imaging",
+    name: "Thermal-window imaging (cold-works or warm-works drives)",
+    when_used:
+      "Drive shows clear behavioural difference inside a temperature window - reads only when chilled or only after warm-up. Common on aging drives with marginal preamps and post-thermal-event drives.",
+    difficulty: "easy",
+    time_estimate: "Multi-session - hours per cooling refresh",
+    environment: "normal-bench",
+    risk_to_data: "medium",
+    parts: [
+      {
+        name: "Reusable freezer ice packs (3-4 of them, rotate)",
+        source: "Supermarket / Amazon",
+        cost_usd: "10-15",
+        matching: "n/a",
+      },
+      {
+        name: "Vacuum-seal bags or zip-locks with one-way valves",
+        source: "Amazon",
+        cost_usd: "5-10",
+        matching: "Critical for preventing condensation on the PCB during cold cycles.",
+      },
+      {
+        name: "Silica gel desiccant pouches",
+        source: "Amazon",
+        cost_usd: "5",
+        matching: "n/a",
+      },
+      {
+        name: "Seedling heat mat with thermostat (warm-fail variant)",
+        source: "Amazon / garden centre",
+        cost_usd: "20-30",
+        matching: "Set 30-35C maximum. Higher temperatures damage healthy drives.",
+      },
+    ],
+    tools: [
+      {
+        name: "IR thermometer or laser-point spot thermometer",
+        cost_usd: "15-30",
+        alternative: "smartctl temperature attribute, polled in a loop",
+      },
+      { name: "Insulated cooler / lunchbag for the imaging session", cost_usd: "10-15", alternative: "" },
+      {
+        name: "Small 12V or USB fan (post-cooling steady state)",
+        cost_usd: "10-15",
+        alternative: "",
+      },
+    ],
+    steps: [
+      {
+        label: "Confirm the thermal window first",
+        detail:
+          "Run reads at room temperature, then chilled, then warmed. Identify which state succeeds.",
+        risk: "low",
+      },
+      {
+        label: "Cold-works variant: pre-chill the drive in a sealed bag",
+        detail:
+          "Drive in a vacuum bag or zip-lock with a desiccant pouch. 30 minutes in the FRIDGE, never the freezer. Goal is ~5C - cold enough to constrict expanded clearances, warm enough to avoid condensation.",
+        risk: "medium",
+      },
+      {
+        label: "Warm-works variant: pre-warm on a thermostat-controlled mat",
+        detail:
+          "30-35C on a seedling mat. Stable for 15 minutes before connecting power.",
+        risk: "low",
+      },
+      {
+        label: "Connect outside the bag/mat, image immediately",
+        detail:
+          "Power the drive, run ddrescue with --no-scrape -d -n. Watch the temperature - cold-side imaging usually has a 20-30 minute working window before the drive warms back up.",
+        risk: "medium",
+      },
+      {
+        label: "Refresh thermal state and resume",
+        detail:
+          "ddrescue's mapfile resumes cleanly. Disconnect power, return drive to the cold bag (or warm mat), re-chill / re-warm, repeat.",
+        risk: "low",
+      },
+      {
+        label: "Watch for condensation",
+        detail:
+          "If the PCB shows visible moisture, STOP. Power off. Allow drive to dry fully (24h in a warm dry room) before any further attempts. Powered-on condensation kills more drives than cold ever does.",
+        risk: "high",
+      },
+      {
+        label: "Image to completion, then stop attempting recovery",
+        detail:
+          "Once you have a full image, no further work on the original. Filesystem recovery happens on the clone.",
+        risk: "low",
+      },
+    ],
+    abort_signals: [
+      "Condensation visible on the PCB or HDA.",
+      "Drive starts clicking after cold cycle (you've revealed an underlying mechanical fault, escalate).",
+      "No clear temperature window - drive is equally bad at all temperatures (failure mode is not thermal).",
+    ],
+    success_rate:
+      "60-85% completion of a full clone when the symptom is genuinely thermal. Often the only DIY path for marginal preamps and cold-side seek issues.",
+  },
+
+  partial_head_imaging: {
+    id: "partial_head_imaging",
+    name: "Partial head imaging (rescue working surfaces, decide on HSA later)",
+    when_used:
+      "ddrescue map shows a regular striped pattern indicating some heads are dead. Working-head data can be recovered with no cleanroom; the customer then decides whether to escalate to HSA swap for the dead-head surfaces.",
+    difficulty: "moderate",
+    time_estimate: "Hours-to-days depending on capacity",
+    environment: "normal-bench",
+    risk_to_data: "low",
+    parts: [
+      {
+        name: "Target drive 1.2x patient capacity",
+        source: "Any reliable HDD or SSD",
+        cost_usd: "varies",
+        matching: "n/a",
+      },
+    ],
+    tools: [
+      { name: "ddrescue + ddrescueview", cost_usd: "0", alternative: "" },
+      {
+        name: "Awk / Python to filter the mapfile by head-modulo regions",
+        cost_usd: "0",
+        alternative: "",
+      },
+      {
+        name: "(Optional) PC-3000 or similar with head-exclusion support",
+        cost_usd: "5000+",
+        alternative: "Manual stripe-skipping in ddrescue is workable",
+      },
+    ],
+    steps: [
+      {
+        label: "Run ddrescue first pass to characterise the stripe",
+        detail:
+          "Standard `ddrescue -d -n -r0` to a target drive. Watch the bad-region pattern emerge - a regular stripe means head failure, random scatter means bad sectors.",
+        risk: "low",
+      },
+      {
+        label: "Measure the stripe period",
+        detail:
+          "ddrescueview shows the visualisation. Stripe period typically equals the drive's track-group allocation (256 MB - 2 GB). Stripe period / good band size = working heads / total heads.",
+        risk: "low",
+      },
+      {
+        label: "Skip dead-head bands fast",
+        detail:
+          "Use `ddrescue --skip-size=64MiB` or larger so the tool jumps past entire dead-head regions instead of grinding on every sector. The mapfile will mark these regions as 'non-trimmed' for later.",
+        risk: "low",
+      },
+      {
+        label: "(Optional, Seagate F3) Disable specific heads via ATA",
+        detail:
+          "Some Seagate firmware accepts vendor commands to read only specified heads. Reduces wear on the working heads during long-running imaging.",
+        risk: "medium",
+      },
+      {
+        label: "Recover the filesystem from the partial image",
+        detail:
+          "Mount the partial image read-only with TestDisk / R-Studio. Files entirely on working heads recover cleanly. Files spanning a dead-head band are partial - the file content is interleaved by sector across heads, so you'll lose proportional fractions.",
+        risk: "low",
+      },
+      {
+        label: "Decide on HSA swap for the missing surfaces",
+        detail:
+          "If the customer needs the data on the dead-head surfaces, escalate to the head_stack_assembly_swap playbook. If the working-head data is all they need (often the case for OS + user files), stop here.",
+        risk: "medium",
+      },
+    ],
+    abort_signals: [
+      "Stripe pattern shows MORE than ~50% of heads failing - failure is cascading, image fast and stop, do not retry.",
+      "Audible grinding develops during imaging - debris from a failed head is being scraped onto remaining surfaces.",
+      "Customer has only photos / videos that span entire surfaces sequentially (no file is fully on a single head) - partial recovery may yield low-value fragments.",
+    ],
+    success_rate:
+      "70-95% recovery of working-head data with no cleanroom or specialist tools. Recovery of dead-head surfaces inherits HSA swap success rate (30-50% DIY, 70-85% with PC-3000).",
+  },
+
+  parking_ramp_swap: {
+    id: "parking_ramp_swap",
+    name: "Donor parking ramp swap (heads still parked correctly)",
+    when_used:
+      "Drive performs a slow rhythmic load-retract-load cycle on power-up. Inspection shows a cracked or dislodged plastic parking ramp. Heads are still parked on the ramp (have NOT contacted the platter).",
+    difficulty: "moderate",
+    time_estimate: "1-2 hours",
+    environment: "dust-mitigated",
+    risk_to_data: "high",
+    parts: [
+      {
+        name: "Donor parking ramp from a same-family drive",
+        source:
+          "Salvage from same-model drive (donordrives.com, eBay matched, e-waste yards for older models)",
+        cost_usd: "30-100 (full donor) or salvage",
+        matching:
+          "Same model + similar generation. Ramp geometry varies between 2.5 and 3.5 inch and platter count - a WD 3.5\" 1-platter ramp will not fit a 4-platter drive.",
+      },
+    ],
+    tools: [
+      {
+        name: "T6/T8 Torx drivers (Wiha or Wera)",
+        cost_usd: "30-50",
+        alternative: "Cheap bits strip the small screws - do not compromise here",
+      },
+      {
+        name: "Plastic spudger / non-marring pry tool",
+        cost_usd: "5",
+        alternative: "",
+      },
+      {
+        name: "Tier 2 DIY laminar flow hood (see Reference > Clean environment)",
+        cost_usd: "125-185",
+        alternative:
+          "Bathroom-steam (Tier 1) is too risky for any work where heads are exposed",
+      },
+      {
+        name: "Bright LED inspection light",
+        cost_usd: "10",
+        alternative: "Phone flashlight at low angle",
+      },
+    ],
+    steps: [
+      {
+        label: "Confirm symptom: slow load-retract cycle, not clicking",
+        detail:
+          "Listen carefully. A 1-3 second rhythmic load-retract-load pattern points at the ramp. Rapid clicks point at head failure - do not open in that case, this procedure won't help.",
+        risk: "low",
+      },
+      {
+        label: "Inspect the donor first",
+        detail:
+          "Photograph donor's ramp. Confirm geometry matches before committing.",
+        risk: "low",
+      },
+      {
+        label: "Pre-flight the clean environment",
+        detail:
+          "Run the laminar flow hood for 15 minutes before opening. Wipe surfaces with IPA. Hairnet, mask, gloves. No carpets, no clothing fibres in the air.",
+        risk: "high",
+      },
+      {
+        label: "Open the donor, photograph the ramp area",
+        detail:
+          "Cover screws (often 6-9 T8, one under the warranty sticker). Note exactly how the ramp is fixed - some are screwed, some are press-fit, some are clipped.",
+        risk: "medium",
+      },
+      {
+        label: "Remove the donor ramp",
+        detail:
+          "The ramp lives outboard of the HSA pivot - removing it does not require disturbing the heads. Lift carefully so the donor is preserved as a future emergency part.",
+        risk: "medium",
+      },
+      {
+        label: "Open the patient",
+        detail:
+          "Same procedure. Confirm patient's heads are still parked on the ramp - if they've fallen, this becomes head_stack_assembly_swap territory.",
+        risk: "high",
+      },
+      {
+        label: "Remove the patient's broken ramp without disturbing the heads",
+        detail:
+          "If the patient's ramp is fragmented, work carefully to capture every piece. Any debris left in the HDA causes future head crashes. A piece of clean micropore tape can lift small fragments.",
+        risk: "high",
+      },
+      {
+        label: "Install the donor ramp",
+        detail:
+          "Same orientation, same fixation method. Hand-tighten. The ramp's load surfaces must align with the head sliders' approach paths.",
+        risk: "high",
+      },
+      {
+        label: "Close the cover, image immediately",
+        detail:
+          "Two diagonal screws are enough for short-term dust protection. Power up, listen for normal load and seek, ddrescue to a target drive.",
+        risk: "medium",
+      },
+    ],
+    abort_signals: [
+      "Patient heads have already fallen onto the platter (visual: head sliders sitting on platter surface, not on the ramp) - this is now an HSA swap.",
+      "Plastic fragments visible on the platter (debris contamination).",
+      "Ramp geometry doesn't match the donor (different platter count or model variant).",
+      "Helium drive - sealed, ramp swap is impossible without breaking the seal.",
+    ],
+    success_rate:
+      "60-80% if heads are still parked correctly and only the ramp is damaged. Drops to head-swap success rate if heads have already contacted the platter.",
+  },
+
+  donor_magnet_swap: {
+    id: "donor_magnet_swap",
+    name: "Donor top-magnet assembly swap",
+    when_used:
+      "Heads seek erratically (overshoot, oscillation, hunting), coil resistance tests good (4-20 ohms), and visual inspection of the top magnet shows a crack or displaced magnet from a drop event.",
+    difficulty: "moderate",
+    time_estimate: "1-2 hours",
+    environment: "dust-mitigated",
+    risk_to_data: "medium",
+    parts: [
+      {
+        name: "Donor top-magnet + yoke assembly",
+        source:
+          "Salvage from matched donor (donordrives.com, eBay matched, e-waste yards)",
+        cost_usd: "30-100 (full donor) or salvage",
+        matching:
+          "Same family. Magnet strength and yoke geometry vary - WD vs Seagate are not interchangeable. Same-model donor preferred but same-family often works for the top magnet.",
+      },
+      {
+        name: "Loctite 243 medium thread locker (for re-seating screws)",
+        source: "Hardware store",
+        cost_usd: "8",
+        matching: "n/a",
+      },
+    ],
+    tools: [
+      {
+        name: "T6/T8 Torx drivers (quality)",
+        cost_usd: "30-50",
+        alternative: "",
+      },
+      {
+        name: "Magnet pry tool or thick plastic wedge",
+        cost_usd: "5",
+        alternative:
+          "Two flathead screwdrivers used as a wedge. The top magnet has VERY strong neodymium pull - do not use bare hands.",
+      },
+      {
+        name: "Tier 2 DIY laminar flow hood",
+        cost_usd: "125-185",
+        alternative: "",
+      },
+    ],
+    steps: [
+      {
+        label: "Confirm coil is healthy, magnet damaged",
+        detail:
+          "Multimeter on coil pads - 4-20 ohms = good. Visual on the top magnet (after carefully removing the cover) - cracks, fragments, or visible displacement of the magnet inside its yoke confirm magnet damage.",
+        risk: "medium",
+      },
+      {
+        label: "Pre-flight the clean environment",
+        detail:
+          "Same as parking ramp swap. Run hood, wipe surfaces, full PPE.",
+        risk: "high",
+      },
+      {
+        label: "Photograph original orientation",
+        detail:
+          "Magnet polarity matters - reversing the magnet will reverse the actuator's drive direction. Photograph from multiple angles before disturbing.",
+        risk: "low",
+      },
+      {
+        label: "Wedge the top magnet plate off",
+        detail:
+          "T6 screws hold the top magnet plate. After removing screws, slide a thick plastic wedge between the top plate and the lower yoke - the pull is severe (5-15 lbs). Pry slowly and evenly.",
+        risk: "high",
+      },
+      {
+        label: "Inspect for fragments on the platter",
+        detail:
+          "Cracked neodymium sheds tiny fragments. Any visible particles on the platter - STOP. Powering on grinds them in. The recovery has shifted to platter contamination.",
+        risk: "high",
+      },
+      {
+        label: "Install the donor magnet plate",
+        detail:
+          "Same orientation as the original (use your photograph). Lower carefully against the lower yoke - the pull will snap it the last 2-3 mm. Reinstall T6 screws with Loctite 243 (medium).",
+        risk: "high",
+      },
+      {
+        label: "Close the cover, power up, image",
+        detail:
+          "Two diagonal cover screws for dust protection. Power up, listen for clean seek behaviour, ddrescue immediately.",
+        risk: "medium",
+      },
+    ],
+    abort_signals: [
+      "Visible neodymium fragments on the platter.",
+      "Yoke is bent (not just the magnet) - more likely a head-swap is also needed.",
+      "Drive was dropped hard enough to crack the magnet - inspect platters first; head crash often accompanies magnet damage.",
+      "Helium drive - sealed.",
+    ],
+    success_rate:
+      "50-70% for clean re-seat of a dislodged-but-intact magnet. 60-75% for donor magnet swap on confirmed cracked magnet. Drops sharply if any neodymium fragments contaminated the platters.",
+  },
+
+  counterfeit_diagnosis: {
+    id: "counterfeit_diagnosis",
+    name: "Counterfeit drive diagnosis and capacity-true partition",
+    when_used:
+      "Suspect counterfeit drive (cheap marketplace listing, model not on manufacturer's site, weight wrong, files come back as garbage). Goal is to confirm the lie and salvage the genuine portion.",
+    difficulty: "easy",
+    time_estimate: "Hours-to-days for full-capacity verification",
+    environment: "normal-bench",
+    risk_to_data: "destructive",
+    parts: [],
+    tools: [
+      { name: "h2testw (Windows, free)", cost_usd: "0", alternative: "" },
+      { name: "f3 (Linux/macOS, free)", cost_usd: "0", alternative: "" },
+      { name: "fdisk / gdisk for re-partitioning", cost_usd: "0", alternative: "" },
+    ],
+    steps: [
+      {
+        label: "Back up any data the user wrote that fits in the first ~10% of capacity",
+        detail:
+          "Counterfeits typically have a small genuine region (32 GB to 1 TB) and report something much larger. Anything stored in the first few GB is on real media; everything past the boundary is gone.",
+        risk: "high",
+      },
+      {
+        label: "Wipe the drive (you've already saved what's salvageable)",
+        detail:
+          "f3probe and h2testw need write access across the full reported capacity. Format the drive to a single partition first.",
+        risk: "destructive",
+      },
+      {
+        label: "Run f3probe (Linux) or h2testw (Windows)",
+        detail:
+          "f3probe --destructive --time-ops on the block device gives the cleanest answer ('Real size: X GB / Announced size: Y GB'). h2testw writes test files across the mounted partition.",
+        risk: "destructive",
+      },
+      {
+        label: "Read the verified-real capacity",
+        detail:
+          "f3probe prints it directly. h2testw shows where verification fails.",
+        risk: "low",
+      },
+      {
+        label: "Re-partition to the genuine size only",
+        detail:
+          "Use fdisk / gdisk / Disk Management to create a single partition limited to the real capacity. Anything past it would silently fail again.",
+        risk: "low",
+      },
+      {
+        label: "Mark the drive clearly so it's not accidentally used at full advertised size",
+        detail:
+          "Sticker on top with the real capacity. Donate it to non-critical use.",
+        risk: "low",
+      },
+      {
+        label: "If sold as new, request a refund and report the seller",
+        detail:
+          "Amazon, eBay, AliExpress all have anti-counterfeit refund policies. h2testw / f3probe screenshots are accepted as evidence.",
+        risk: "low",
+      },
+    ],
+    abort_signals: [
+      "User wrote critical data past the genuine capacity threshold expecting it to be saved - that data is gone, period. No recovery is possible because it was never stored.",
+      "Drive's firmware actively refuses identity queries to mask the underlying chip - the imitation is sophisticated, manufacturer reflash is unavailable.",
+    ],
+    success_rate:
+      "100% at exposing the scam. Recovery of any data the user wrote past the genuine boundary: 0%. Recovery of data within the genuine capacity: 80%+ via standard imaging.",
+  },
+
   hpa_dco_removal: {
     id: "hpa_dco_removal",
     name: "HPA / DCO removal to restore advertised capacity",
