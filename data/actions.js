@@ -166,4 +166,179 @@ export const actions = [
       "Same procedure as a regular PCB swap: matched donor + ROM transfer. The motor driver IC is on the PCB, so a board swap restores spin even when stiction and PCB-rail tests come up clean.",
     playbook: "pcb_swap_with_rom_transfer",
   },
+
+  // --- Round 2 actions ---
+
+  {
+    id: "shuck_external",
+    label: "Shuck the external enclosure and connect the bare drive directly to SATA",
+    severity: "diy",
+    triggers: ["usb_bridge_failure", "external_power_misadventure"],
+    detail:
+      "Pry open the plastic enclosure with a spudger, remove the drive from its USB-SATA bridge, and plug it directly into a desktop SATA port. About 80% of 'my external drive died' cases are a dead bridge - the drive itself is fine. KEEP the original bridge in case the drive is hardware-encrypted (WD MyBook, Seagate Backup Plus): the AES key lives in the bridge's serial flash.",
+    playbook: "external_drive_shuck",
+  },
+  {
+    id: "transplant_bridge_flash",
+    label: "Transplant the encryption-bridge serial flash to a same-firmware donor",
+    severity: "shop",
+    triggers: ["encrypted_bridge_keyloss"],
+    detail:
+      "WD/Seagate self-encrypting enclosures store the AES key in the bridge PCB's serial flash. Read the flash with a CH341A clip (drive does not need to be powered), write to a same-firmware donor bridge, and reuse the donor for decryption. If the original bridge is destroyed AND no same-firmware donor is findable, the data is mathematically lost.",
+    playbook: "encrypted_bridge_key_recovery",
+  },
+  {
+    id: "find_encryption_key",
+    label: "Recover the host-side encryption key (BitLocker/FileVault/LUKS)",
+    severity: "diy",
+    triggers: ["host_software_encryption"],
+    detail:
+      "Check Microsoft account at account.microsoft.com/devices/recoverykey for BitLocker. Apple ID iCloud has FileVault recovery keys. AD domains escrow BitLocker centrally. LUKS users may have a keyfile on a backup. Once you have it, dislocker (Linux) or native OS unlock mounts the volume normally. Without the key, the data is unrecoverable - no lab can break AES-256.",
+    playbook: "encryption_key_recovery",
+  },
+  {
+    id: "use_modern_host",
+    label: "Move the drive to a modern UEFI host with a current SATA/USB3 controller",
+    severity: "diy",
+    triggers: ["capacity_barrier_host"],
+    detail:
+      "If the drive reports 137GB / 2.0TB / 2.2TB on the original host but shows full capacity on a modern desktop or USB3 dock, the failure is in the host - not the drive. Move the drive permanently to a host that can address its full size, and use GPT partitioning rather than MBR.",
+  },
+  {
+    id: "fix_external_power",
+    label: "Replace the adapter or use a powered USB hub / Y-cable",
+    severity: "diy",
+    triggers: ["external_power_misadventure"],
+    detail:
+      "Verify the barrel-jack adapter is the correct voltage AND polarity (multimeter). Most 3.5\" external drives need 12V 2A center-positive 5.5x2.5mm. For 2.5\" bus-powered drives use a powered USB3 hub, a Y-cable into two ports, or a port that can supply at least 900mA. If the original wrong adapter killed the bridge, shuck and connect via SATA.",
+  },
+  {
+    id: "platform_shift_recognise_format",
+    label: "Move the drive to a host that understands its on-disk format",
+    severity: "diy",
+    triggers: ["host_misinterprets_drive"],
+    detail:
+      "Boot a Linux live USB (Ubuntu / SystemRescue) for RAID member assembly via mdadm/lvm/zfs. Apple Fusion / APFS-encrypted volumes need a Mac. HFS+ Time Machine on Windows needs HFSExplorer or paragonfs. CRITICALLY: do NOT click 'Initialize disk' / 'You need to format this' in Windows - that overwrites the partition table.",
+    playbook: "format_recognition",
+  },
+  {
+    id: "smr_idle_then_image",
+    label: "Power on, leave idle 4-12 hours on a UPS, then image",
+    severity: "diy",
+    triggers: ["smr_write_zone_corruption"],
+    detail:
+      "SMR drives need uninterrupted idle time after a power-loss-during-write to reorganise shingled bands. Power on, do nothing, wait. Use a UPS so a second power loss doesn't restart the cycle. Once responsive, ddrescue to a target drive in one continuous session.",
+  },
+  {
+    id: "sshd_cold_image",
+    label: "Image the SSHD fast-and-cold before the cache controller locks out",
+    severity: "shop",
+    triggers: ["sshd_cache_failure"],
+    detail:
+      "ddrescue --no-scrape -d -n on the first pass. SSHD cache controllers can decide to refuse all I/O once they detect NAND failure. Get the rotating-media data off in one pass; do not retry on the original.",
+  },
+  {
+    id: "verify_counterfeit",
+    label: "Confirm counterfeit with h2testw / F3, partition to genuine size",
+    severity: "diy",
+    triggers: ["counterfeit_capacity_spoofed"],
+    detail:
+      "h2testw (Windows) or f3write/f3read (Linux/macOS) writes pseudorandom data across the full reported capacity then verifies. If verification fails past a threshold, partition the drive to the verified size only and use the smaller (real) capacity. Data written past the boundary is gone - no recovery is possible because it was never stored.",
+    playbook: "counterfeit_diagnosis",
+  },
+  {
+    id: "set_expectations_sed",
+    label: "Stop spending - SED with lost DEK is unrecoverable",
+    severity: "unrecoverable",
+    triggers: ["sed_lost_encryption_key"],
+    detail:
+      "Hardware AES-256 self-encryption with a lost or cryptographically-erased DEK is mathematically unrecoverable. No lab can break it. Confirm with vendor SED utility (Samsung Magician, WD Security, Seagate Toolkit, sedutil-cli). The DIY value is preventing further spend; offer the user one last check of password managers and vendor key escrow before closing the case.",
+  },
+  {
+    id: "clone_skip_smart",
+    label: "Clone without SMART probing (bypass the log corruption)",
+    severity: "diy",
+    triggers: ["smart_log_corruption_lockout"],
+    detail:
+      "Use ddrescue with --idirect to skip kernel SMART probes, OR boot a minimal Linux that does not auto-query SMART (no smartd, no UDisks). The user data area is fine - the SMART log structure is what's hanging the drive. Image first, worry about the SMART repair (which needs PC-3000) only if the drive will be reused.",
+  },
+  {
+    id: "thermal_window_clone",
+    label: "Image the drive in its working temperature window",
+    severity: "diy",
+    triggers: ["thermal_dependent_failure"],
+    detail:
+      "If cold-works/warm-fails: insulated container with ice packs (NOT freezer - condensation), drive in a sealed bag with a desiccant pouch. Run ddrescue and refresh cooling every 30 minutes. If warm-works/cold-fails: 30-35C seedling mat with a thermostat, never higher. Either way, image in one session - thermal cycles are stressful for marginal hardware.",
+    playbook: "thermal_window_imaging",
+  },
+  {
+    id: "image_then_partial_recover",
+    label: "Image the working heads first; decide on HSA swap for the dead surfaces afterwards",
+    severity: "shop",
+    triggers: ["partial_head_failure"],
+    detail:
+      "ddrescue with stripe-aware filtering: pass --skip-size to jump past entire dead-head bands fast. Modern Linux ddrescue + ddrescueview lets you visualise the stripe. Recover all the working-head data with no cleanroom; only escalate to donor HSA swap if the customer specifically needs the dead-head surfaces.",
+    playbook: "partial_head_imaging",
+  },
+  {
+    id: "lab_translator_or_plist",
+    label: "Send to a lab for P-list / translator regeneration on PC-3000",
+    severity: "lab",
+    triggers: ["plist_corruption_remap_loop"],
+    detail:
+      "Uniform 1-5 MB/s with no SMART growth means the P-list is damaged. Field-imaging is possible but takes weeks per terabyte. PC-3000 with the family-specific P-list rebuild module is the actual fix. Do NOT attempt HSA swap - the heads are fine.",
+  },
+  {
+    id: "donor_pcb_for_vcm",
+    label: "Donor PCB swap (VCM driver section dead, coil is fine)",
+    severity: "shop",
+    triggers: ["vcm_driver_ic_failure"],
+    detail:
+      "Same procedure as any other donor PCB swap with ROM transfer - the VCM driver lives on the PCB combo chip. Confirm the coil resistance is healthy first (4-20 ohm), otherwise it's actuator_coil_open and a PCB swap will not help.",
+    playbook: "pcb_swap_with_rom_transfer",
+  },
+  {
+    id: "donor_pcb_for_phy",
+    label: "Donor PCB swap (SATA PHY dead, drive alive on serial)",
+    severity: "shop",
+    triggers: ["scsi_sata_phy_dead"],
+    detail:
+      "Confirmed via UART boot banner first (drive is healthy, just can't talk SATA). Standard donor PCB + ROM transfer restores the host interface.",
+    playbook: "pcb_swap_with_rom_transfer",
+  },
+  {
+    id: "single_pass_calibration_loop",
+    label: "Single careful clone attempt around the calibration loop",
+    severity: "shop",
+    triggers: ["slow_calibration_loop"],
+    detail:
+      "ddrescue with -d -n --skip-size=64MiB --no-trim --no-scrape. Power-cycle attempts get a clean ID some fraction of the time; use a UART terminal to abort the recal manually if you have one. Do not retry on the original - drive may progress to head_crash. Active cooling helps if the recal is thermally driven.",
+  },
+  {
+    id: "donor_ramp_swap",
+    label: "Donor parking ramp swap (heads still parked correctly)",
+    severity: "shop",
+    triggers: ["parking_ramp_damage"],
+    detail:
+      "If the heads have NOT fallen onto the platter, the ramp can be swapped from a same-family donor in a Tier 2 dust-mitigated environment. The platters and HSA pivot are not disturbed. If heads have already contacted the platter, this becomes a full HSA swap.",
+    playbook: "parking_ramp_swap",
+  },
+  {
+    id: "donor_magnet_swap",
+    label: "Donor top-magnet assembly swap (cracked or dislodged)",
+    severity: "shop",
+    triggers: ["magnet_dislodged_or_cracked"],
+    detail:
+      "Two T6/T8 screws release the top magnet plate. Use a thick plastic wedge to break the magnetic clamp - do NOT use bare hands, the pull is dangerous. Inspect platters afterwards: any neodymium fragments mean the recovery has shifted to platter contamination territory.",
+    playbook: "donor_magnet_swap",
+  },
+  {
+    id: "flex_cable_inspection",
+    label: "Inspect (and possibly bridge) the head FPC cable",
+    severity: "lab-cleanroom",
+    triggers: ["head_flex_cable_damage"],
+    detail:
+      "FPC repair under microscopy is feasible for a single broken trace using conductive silver paint or hair-thin solder. Most cases need a full HSA swap because the cable is bonded into the head stack at one end. Confirm with the position-tap test before opening.",
+    playbook: "head_stack_assembly_swap",
+  },
 ];
