@@ -2,7 +2,6 @@ import {
   createState,
   recompute,
   answerTest,
-  goBack,
   reset,
   remainingHypotheses,
   bestNextTest,
@@ -202,6 +201,7 @@ function renderStage() {
   for (const btn of els.stage.querySelectorAll(".answer")) {
     btn.addEventListener("click", () => {
       answerTest(state, btn.dataset.test, btn.dataset.answer);
+      pushHashFromState();
       renderAll();
     });
   }
@@ -1085,10 +1085,79 @@ function renderReference(section) {
   `;
 }
 
+// --- URL routing -----------------------------------------------------------
+// The answer chain is encoded as #/testId:answerId/testId:answerId/... so any
+// state can be deep-linked. We push one URL entry per answer, so browser
+// back/forward walks the chain just like the in-app back button.
+
+function hashForHistory(history) {
+  if (history.length === 0) return "";
+  return "#/" + history.map((h) => `${h.testId}:${h.answerId}`).join("/");
+}
+
+function parseHash() {
+  const raw = (window.location.hash || "").replace(/^#\/?/, "");
+  if (!raw) return [];
+  return raw
+    .split("/")
+    .map((seg) => {
+      const [testId, answerId] = seg.split(":");
+      return { testId, answerId };
+    })
+    .filter((p) => p.testId && p.answerId);
+}
+
+function urlFor(history) {
+  return (
+    window.location.pathname + window.location.search + hashForHistory(history)
+  );
+}
+
+function pushHashFromState({ replace = false } = {}) {
+  const url = urlFor(state.history);
+  if (replace) window.history.replaceState(null, "", url);
+  else if (window.location.pathname + window.location.search + window.location.hash !== url)
+    window.history.pushState(null, "", url);
+}
+
+function applyHashToState() {
+  const target = parseHash();
+  state.history = [];
+  for (const { testId, answerId } of target) {
+    const test = getTest(testId);
+    const answer = test?.answers.find((a) => a.id === answerId);
+    if (!test || !answer) continue;
+    state.history.push({ testId, answerId });
+  }
+  recompute(state);
+}
+
+function initFromHash() {
+  const target = parseHash();
+  if (target.length === 0) return;
+  // Replay each valid answer, pushing one URL entry per step so back/forward
+  // can walk the chain. The first hop replaces the deep-link entry so we
+  // don't leave a duplicate behind.
+  let first = true;
+  for (const { testId, answerId } of target) {
+    const test = getTest(testId);
+    const answer = test?.answers.find((a) => a.id === answerId);
+    if (!test || !answer) continue;
+    answerTest(state, testId, answerId);
+    pushHashFromState({ replace: first });
+    first = false;
+  }
+}
+
+window.addEventListener("popstate", () => {
+  applyHashToState();
+  renderAll();
+});
+
 // --- Wiring ----------------------------------------------------------------
 els.backBtn.addEventListener("click", () => {
-  goBack(state);
-  renderAll();
+  if (state.history.length === 0) return;
+  window.history.back();
 });
 
 els.resetBtn.addEventListener("click", () => {
@@ -1101,6 +1170,7 @@ els.resetBtn.addEventListener("click", () => {
   reset(state);
   drive = clearDrive();
   clearAllOutputs();
+  pushHashFromState();
   renderAll();
 });
 
@@ -1111,6 +1181,7 @@ els.modeSwitch.addEventListener("click", (e) => {
   for (const b of els.modeSwitch.querySelectorAll("button")) {
     b.classList.toggle("active", b === btn);
   }
+  pushHashFromState();
   renderAll();
 });
 
@@ -1181,5 +1252,8 @@ for (const b of els.osSwitch.querySelectorAll("button")) {
 for (const b of els.themeSwitch.querySelectorAll("button")) {
   b.classList.toggle("active", b.dataset.theme === theme);
 }
+
+// Replay any deep-linked answer chain from the URL hash before first paint.
+initFromHash();
 
 renderAll();
