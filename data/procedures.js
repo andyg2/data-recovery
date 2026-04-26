@@ -1081,6 +1081,766 @@ export const procedures = {
     interpretation:
       "IDs = problem was ROM, not platter SA. Still fails = platter SA damage; lab needed. ROM unreadable = original NVRAM is dead, harder case.",
   },
+
+  // -------------------------------------------------------------------------
+  enclosure_shuck: {
+    prerequisites: [
+      "Plastic spudger / pry tools (iFixit kit or thin guitar pick).",
+      "Desktop with spare SATA + power, OR a known-good SATA-to-USB dock.",
+      "Photograph the enclosure in case the drive is hardware-encrypted - the bridge PCB must be preserved.",
+    ],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin) - after physical shucking",
+        tools: ["Get-PhysicalDisk"],
+        steps: [
+          {
+            label:
+              "Shuck the drive: pry the seam with a spudger; remove drive from the bridge PCB. Keep the bridge - if data comes up as random noise on direct SATA the bridge holds the encryption key.",
+            command: "# Hardware step",
+            requires: [],
+          },
+          {
+            label: "Connect the bare drive to a desktop SATA port (or a different USB-SATA dock).",
+            command: "Get-PhysicalDisk | Select FriendlyName,SerialNumber,Size,HealthStatus",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["util-linux"],
+        steps: [
+          {
+            label: "Shuck the drive (hardware step).",
+            command: "# Hardware step",
+            requires: [],
+          },
+          {
+            label: "Confirm the drive enumerates on direct SATA.",
+            command: "lsblk -o NAME,MODEL,SERIAL,SIZE,TRAN",
+            requires: [],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["diskutil"],
+        steps: [
+          {
+            label: "Shuck the drive and connect via SATA dock.",
+            command: "diskutil list",
+            requires: [],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Bare drive identifies with the same model/serial as the enclosure label, full capacity. If data returns as uniform random noise the enclosure was hardware-encrypted - keep the bridge.",
+    interpretation:
+      "IDs cleanly on direct SATA = bridge was the failure. IDs but data is random = encrypted bridge, key is in the bridge flash. Still dead = drive PCB or HDA failure, escalate to that path.",
+  },
+
+  // -------------------------------------------------------------------------
+  data_signature: {
+    prerequisites: ["Drive identifies and reads succeed.", "Drive is unmounted (read-only is fine; do not let the OS auto-mount)."],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin) or HxD",
+        tools: ["HxD physical disk view, or WSL with xxd/dd"],
+        steps: [
+          {
+            label: "Read the first 16 MB and look at offsets 0, 0x200 (LBA1), 0x10000.",
+            command:
+              "wsl bash -c 'sudo dd if=${DEVICE} bs=1M count=16 status=none | xxd | head -200'",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Or open ${DEVICE} in HxD as a physical disk.",
+            command: "# HxD: File -> Open disk -> Physical disks -> select drive",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["coreutils, xxd"],
+        steps: [
+          {
+            label: "Hex dump the first MB.",
+            command: "sudo dd if=${DEVICE} bs=1M count=1 status=none | xxd | head -200",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Search for filesystem and encryption magic bytes.",
+            command:
+              "sudo dd if=${DEVICE} bs=1M count=16 status=none | grep -aobE '(NTFS|EXFAT|-FVE-FS-|LUKS|ReFS|ext|HFS+|APFS|encrdsa|LVM2|LABELONE|ZFS)' | head -20",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Compute entropy of the first 100 MB - high entropy = encryption or random.",
+            command: "sudo dd if=${DEVICE} bs=1M count=100 status=none | ent",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["dd, xxd"],
+        steps: [
+          {
+            label: "Hex dump the first MB.",
+            command: "sudo dd if=${DEVICE} bs=1m count=1 | xxd | head -200",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Recognizable filesystem magic = drive is fine, look at filesystem layer. '-FVE-FS-' = BitLocker. 'LUKS' = LUKS. 'encrdsa' = FileVault. Uniform random = encrypted (drive-bridge or SED) or counterfeit garbage. All zeros = translator or wipe.",
+    interpretation:
+      "Determines whether the data layer is intact, encrypted, or destroyed before any further hardware work.",
+  },
+
+  // -------------------------------------------------------------------------
+  modern_host_test: {
+    prerequisites: [
+      "A second computer with UEFI BIOS, modern chipset, and ideally a USB3 UASP-capable dock.",
+      "Same drive, same connection type (SATA or USB) as on the original host.",
+    ],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin) - on the modern host",
+        tools: ["Get-PhysicalDisk"],
+        steps: [
+          {
+            label: "Read capacity on the modern host.",
+            command:
+              "Get-PhysicalDisk | Where-Object {$_.SerialNumber -eq '${SERIAL}'} | Select FriendlyName,Size",
+            requires: ["SERIAL"],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["hdparm"],
+        steps: [
+          {
+            label: "Read advertised and native capacity.",
+            command: "sudo hdparm -I ${DEVICE} | grep -E 'device size|number of sectors'",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Compare against the printed label.",
+            command: "# Manual comparison",
+            requires: [],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["diskutil"],
+        steps: [
+          {
+            label: "Read capacity.",
+            command: "diskutil info ${DEVICE} | grep -E 'Disk Size|Total Size'",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Modern host reports the full label capacity. If the original host showed a round limit (137GB / 2.0TB / 2.2TB), the failure was a host-side capacity barrier.",
+    interpretation:
+      "Full size on modern host = host barrier confirmed. Still truncated = the drive itself or HPA/DCO is the cause.",
+  },
+
+  // -------------------------------------------------------------------------
+  drive_technology: {
+    prerequisites: [
+      "Drive model number from the label or smartctl.",
+      "Internet access for spec lookup.",
+    ],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin)",
+        tools: ["smartmontools"],
+        steps: [
+          {
+            label: "Read model and rotation/cache attributes.",
+            command:
+              "smartctl -i ${DEVICE} | findstr /R \"Model Capacity Rotation\"",
+            requires: ["DEVICE"],
+          },
+          {
+            label:
+              "Cross-reference: ServeTheHome / Backblaze SMR list, vendor datasheet for SSHD/SMR/Helium designation.",
+            command: "# Browser: search '${MODEL} CMR or SMR'",
+            requires: ["MODEL"],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["smartmontools"],
+        steps: [
+          {
+            label: "Get model identification.",
+            command: "sudo smartctl -i ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Look up recording technology.",
+            command: "# Web search: '${MODEL} CMR SMR SSHD'",
+            requires: ["MODEL"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["smartmontools"],
+        steps: [
+          {
+            label: "Get model identification.",
+            command: "sudo smartctl -i ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "A definite category: regular CMR, SSHD (look for NAND attributes 248-251), SMR (vendor or community list), helium (label says 'He'), or counterfeit (model not on manufacturer's site).",
+    interpretation:
+      "Drive technology determines the imaging strategy. SMR drives need idle-to-reorganise time. SSHDs need fast-and-cold imaging. Counterfeits need h2testw confirmation before recovery work.",
+  },
+
+  // -------------------------------------------------------------------------
+  temperature_correlation: {
+    prerequisites: [
+      "A way to controllably cool (sealed bag with ice packs in fridge) or warm (seedling mat with thermostat).",
+      "An IR thermometer or smartctl temperature attribute.",
+      "Drive in a sealed ziplock with desiccant to prevent condensation.",
+    ],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin)",
+        tools: ["smartmontools"],
+        steps: [
+          {
+            label: "Baseline read at room temperature, log any errors.",
+            command: "smartctl -a ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+          {
+            label:
+              "Cool drive in sealed bag in fridge for 30 min. Connect, wait until baseline stable, retest.",
+            command: "smartctl -A ${DEVICE} | findstr Temperature",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Warm drive on seedling mat at 30-35C, retest.",
+            command: "smartctl -A ${DEVICE} | findstr Temperature",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["smartmontools, hdparm"],
+        steps: [
+          {
+            label: "Cooled state read test.",
+            command:
+              "sudo dd if=${DEVICE} of=/dev/null bs=1M count=1024 skip=10240 status=progress",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Warmed state read test (same offset for comparability).",
+            command:
+              "sudo dd if=${DEVICE} of=/dev/null bs=1M count=1024 skip=10240 status=progress",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Track temperature during reads.",
+            command: "watch -n 5 'sudo smartctl -A ${DEVICE} | grep -i temp'",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["smartmontools"],
+        steps: [
+          {
+            label: "Cooled / warmed read tests.",
+            command:
+              "sudo dd if=${DEVICE} of=/dev/null bs=1m count=1024 oseek=10240",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Strong correlation: error rate drops to zero (or rises to 100%) inside the working temperature window. SMART temperature attribute moves predictably with the manipulation.",
+    interpretation:
+      "If the working window is real, image inside it. If not, the failure is not thermally-driven and you can skip thermal manipulation.",
+  },
+
+  // -------------------------------------------------------------------------
+  seek_cadence: {
+    prerequisites: ["Drive spins up. Phone or recorder ready."],
+    os: {
+      windows: {
+        shell: "n/a - listen test",
+        tools: [],
+        steps: [
+          {
+            label:
+              "Power the drive briefly (max 10s) and record the audio. Count seeks per minute by playback.",
+            command: "# Listening - no command",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "n/a - listen test",
+        tools: [],
+        steps: [
+          {
+            label:
+              "Power and record. Count: rapid (1-3/sec) = head_crash, slow rhythmic (1 per 8-30s) = calibration loop, load-retract every 1-3s = parking_ramp_damage, irregular = magnet/coil.",
+            command: "# Listening - no command",
+            requires: [],
+          },
+        ],
+      },
+      macos: {
+        shell: "n/a - listen test",
+        tools: [],
+        steps: [
+          {
+            label: "Power and record.",
+            command: "# Listening - no command",
+            requires: [],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "A clear cadence category: rapid clicking, slow recal, load-retract, irregular hunt, or no seek sounds at all.",
+    interpretation:
+      "The cadence picks among head_crash / slow_calibration_loop / parking_ramp_damage / magnet_dislodged_or_cracked - all of which sound 'wrong' but mean different things and need different recovery paths.",
+  },
+
+  // -------------------------------------------------------------------------
+  smart_vs_read: {
+    prerequisites: ["Drive identifies (at least intermittently)."],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin) or WSL",
+        tools: ["WSL with smartctl + dd"],
+        steps: [
+          {
+            label: "Try a raw read of the first sector first (skips kernel SMART probe).",
+            command:
+              "wsl bash -c 'sudo dd if=/dev/sdX of=/dev/null bs=512 count=1 status=progress'",
+            requires: [],
+          },
+          {
+            label: "Now try smartctl - does it hang or error?",
+            command: "smartctl -a ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["coreutils, smartmontools"],
+        steps: [
+          {
+            label: "Raw read first.",
+            command:
+              "timeout 10 sudo dd if=${DEVICE} of=/dev/null bs=512 count=1 status=progress",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Then SMART query.",
+            command: "timeout 30 sudo smartctl -a ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["smartmontools"],
+        steps: [
+          {
+            label: "Raw read then SMART.",
+            command:
+              "sudo dd if=${DEVICE} of=/dev/null bs=512 count=1 && sudo smartctl -a ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Raw dd succeeds quickly while smartctl hangs or returns parse errors = SMART log corruption. Both succeed = healthy. Both fail = mechanical or interface fault.",
+    interpretation:
+      "Confirms whether the drive is hung on its own log structure rather than on actual user data access.",
+  },
+
+  // -------------------------------------------------------------------------
+  throughput_uniformity: {
+    prerequisites: [
+      "Drive identifies and reads succeed at LBA 0.",
+      "Drive is unmounted.",
+      "Note the drive's reported capacity for offset calculations.",
+    ],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin) or WSL",
+        tools: ["dd in WSL"],
+        steps: [
+          {
+            label: "Sample at start.",
+            command:
+              "wsl bash -c 'sudo dd if=/dev/sdX of=/dev/null bs=1M count=64 status=progress'",
+            requires: [],
+          },
+          {
+            label: "Sample at 25% / 50% / 75% offsets.",
+            command:
+              "wsl bash -c 'sudo dd if=/dev/sdX of=/dev/null bs=1M count=64 skip=$((CAPACITY_GB*1024/4)) status=progress'",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash (root)",
+        tools: ["coreutils, smartmontools"],
+        steps: [
+          {
+            label: "Sample at five offsets.",
+            command:
+              "for pct in 0 25 50 75 99; do echo \"--- ${pct}% ---\"; sudo dd if=${DEVICE} of=/dev/null bs=1M count=64 skip=$(($(blockdev --getsize64 ${DEVICE})/1048576*$pct/100)) status=progress; done",
+            requires: ["DEVICE"],
+          },
+          {
+            label: "Watch SMART for event growth during the test.",
+            command: "sudo smartctl -A ${DEVICE} | grep -E 'Reallocated|Pending|Uncorrect'",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["dd"],
+        steps: [
+          {
+            label: "Sample at multiple offsets.",
+            command:
+              "for pct in 0 25 50 75 99; do sudo dd if=${DEVICE} of=/dev/null bs=1m count=64 oseek=...; done",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Uniform full-speed = healthy. Uniform 1-10 MB/s with no SMART growth = P-list damage. Patchy = bad sectors / head degradation. Striped pattern = partial head failure.",
+    interpretation:
+      "Throughput pattern picks between bad_sectors_major / plist_corruption_remap_loop / partial_head_failure - which would all show similar slow speeds but need different responses.",
+  },
+
+  // -------------------------------------------------------------------------
+  ddrescue_map_pattern: {
+    prerequisites: [
+      "ddrescue clone has been running for at least a few hours.",
+      "ddrescueview installed (Linux) or read the .map file directly.",
+    ],
+    os: {
+      windows: {
+        shell: "WSL",
+        tools: ["ddrescueview, ddrescuelog"],
+        steps: [
+          {
+            label: "Render the map.",
+            command: "wsl ddrescueview ${LOGFILE}",
+            requires: ["LOGFILE"],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash",
+        tools: ["ddrescueview, ddrescuelog"],
+        steps: [
+          {
+            label: "Open the visual map.",
+            command: "ddrescueview ${LOGFILE}",
+            requires: ["LOGFILE"],
+          },
+          {
+            label: "Or print summary.",
+            command: "ddrescuelog -t ${LOGFILE}",
+            requires: ["LOGFILE"],
+          },
+          {
+            label: "Histogram of bad-region sizes - regular size = stripe.",
+            command:
+              "awk '$3==\"-\" {print $2}' ${LOGFILE} | sort | uniq -c | sort -rn | head",
+            requires: ["LOGFILE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh",
+        tools: ["ddrescueview"],
+        steps: [
+          {
+            label: "Render the map.",
+            command: "ddrescueview ${LOGFILE}",
+            requires: ["LOGFILE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Random scatter of small bad regions = bad sectors. Regular repeating stripe = partial head failure (stripe period correlates to head count). One huge bad region = single contiguous failure.",
+    interpretation:
+      "Stripe pattern means the bad regions are head-correlated - some heads failed, others fine. Recovery strategy shifts from 'image around bad sectors' to 'image around dead heads'.",
+  },
+
+  // -------------------------------------------------------------------------
+  coil_check: {
+    prerequisites: [
+      "PCB removable to expose head-stack contact pads.",
+      "Multimeter set to ohms (200-ohm range).",
+      "Photograph contact layout before disconnecting.",
+    ],
+    os: {
+      windows: {
+        shell: "n/a - hardware test",
+        tools: ["Multimeter"],
+        steps: [
+          {
+            label:
+              "Disconnect PCB. Locate the two voice-coil pads on the head-stack interface (smaller than the 4-6 motor pads, often on one edge).",
+            command: "# Hardware - locate pads",
+            requires: [],
+          },
+          {
+            label: "Measure resistance pad-to-pad. Healthy: 4-20 ohms (drive-family dependent).",
+            command: "# Hardware - read multimeter",
+            requires: [],
+          },
+          {
+            label: "Reconnect PCB and listen during spin-up.",
+            command: "# Hardware - listen",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "n/a - hardware test",
+        tools: ["Multimeter"],
+        steps: [
+          {
+            label: "Same procedure as Windows; this is a multimeter test.",
+            command: "# Hardware",
+            requires: [],
+          },
+        ],
+      },
+      macos: {
+        shell: "n/a - hardware test",
+        tools: ["Multimeter"],
+        steps: [
+          {
+            label: "Same procedure as Windows.",
+            command: "# Hardware",
+            requires: [],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Healthy coil: 4-20 ohms across the two voice-coil pads. Open: infinite ohms. Shorted: under 1 ohm. Combined with audible seek behaviour identifies actuator_coil_open vs magnet_dislodged_or_cracked.",
+    interpretation:
+      "Coil good + irregular seeks = magnet damage. Coil open = actuator_coil_open. Coil good + normal seeks = neither.",
+  },
+
+  // -------------------------------------------------------------------------
+  position_thermal_tap: {
+    prerequisites: [
+      "Drive identifies and reads at least intermittently.",
+      "Pencil with eraser end (for tapping).",
+      "Hairdryer at LOW heat OR drive in fridge (sealed bag) OR ambient comparison.",
+    ],
+    os: {
+      windows: {
+        shell: "n/a - hardware procedure",
+        tools: [],
+        steps: [
+          {
+            label:
+              "While reading (smartctl loop or dd loop), tap gently with the pencil eraser over the FPC ribbon's exit point on the HDA. Watch for momentary symptom changes.",
+            command: "# Hardware",
+            requires: [],
+          },
+          {
+            label:
+              "Thermal cycle: chill drive in sealed bag in fridge 30 min, attempt reads, warm to room temp, retest.",
+            command: "# Hardware",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash",
+        tools: [],
+        steps: [
+          {
+            label: "Loop reads while tapping.",
+            command: "while true; do sudo dd if=${DEVICE} of=/dev/null bs=4k count=10 2>&1 | grep -i error; sleep 0.5; done",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh",
+        tools: [],
+        steps: [
+          {
+            label: "Same loop technique.",
+            command: "while true; do sudo dd if=${DEVICE} of=/dev/null bs=4k count=10; sleep 0.5; done",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Intermittent error rate that tracks with tapping or temperature = mechanical marginality (FPC trace, cold solder joint, or thermal-window drive). Consistent = the failure is somewhere else.",
+    interpretation:
+      "Tap-sensitivity confirms head_flex_cable_damage or thermal_dependent_failure. No change rules them out and points elsewhere.",
+  },
+
+  // -------------------------------------------------------------------------
+  smr_idle_recovery: {
+    prerequisites: [
+      "Drive is a known SMR model.",
+      "Recent power loss during a write event.",
+      "UPS available so a second power loss doesn't restart the cycle.",
+    ],
+    os: {
+      windows: {
+        shell: "PowerShell (Admin)",
+        tools: [],
+        steps: [
+          {
+            label:
+              "Power the drive on. Connect SATA but DO NOT mount or read. Leave idle for 4-12 hours.",
+            command: "# Just wait",
+            requires: [],
+          },
+          {
+            label: "After idle period, attempt a sequential read to confirm responsiveness.",
+            command: "wsl sudo dd if=/dev/sdX of=/dev/null bs=1M count=1024 status=progress",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash",
+        tools: ["coreutils"],
+        steps: [
+          {
+            label: "Power on, do not access. Wait 4-12 hours.",
+            command: "# Wait - drive reorganises shingled bands internally",
+            requires: [],
+          },
+          {
+            label: "Confirm responsiveness.",
+            command: "sudo dd if=${DEVICE} of=/dev/null bs=1M count=1024 status=progress",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh",
+        tools: ["dd"],
+        steps: [
+          {
+            label: "Same procedure.",
+            command: "sudo dd if=${DEVICE} of=/dev/null bs=1m count=1024",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Drive becomes responsive after the idle period and reads succeed at near-platform speed.",
+    interpretation:
+      "Responsive = SMR housekeeping completed; image now in one continuous session. Still unresponsive after 12+ hours = problem isn't SMR housekeeping.",
+  },
+
+  // -------------------------------------------------------------------------
+  h2testw_verify: {
+    prerequisites: [
+      "DESTRUCTIVE - data on the drive will be overwritten.",
+      "Use only if data is already lost or drive is suspected counterfeit.",
+      "Allow many hours / days for full-capacity verification.",
+    ],
+    os: {
+      windows: {
+        shell: "h2testw GUI (free, German tool, English UI)",
+        tools: ["h2testw"],
+        steps: [
+          {
+            label:
+              "Run h2testw, point at the drive's only mounted partition (must be formatted and empty). Click 'Write + Verify'.",
+            command: "# h2testw GUI",
+            requires: [],
+          },
+        ],
+      },
+      linux: {
+        shell: "bash",
+        tools: ["f3 (apt install f3)"],
+        steps: [
+          {
+            label: "Mount the drive at /mnt/test, then write test files.",
+            command: "sudo f3write /mnt/test",
+            requires: [],
+          },
+          {
+            label: "Verify them back.",
+            command: "sudo f3read /mnt/test",
+            requires: [],
+          },
+          {
+            label:
+              "Or use the block-device variant (more thorough, no filesystem needed).",
+            command: "sudo f3probe --destructive --time-ops ${DEVICE}",
+            requires: ["DEVICE"],
+          },
+        ],
+      },
+      macos: {
+        shell: "zsh / Terminal",
+        tools: ["f3 (brew install f3)"],
+        steps: [
+          {
+            label: "Same procedure as Linux.",
+            command: "sudo f3write /Volumes/test && sudo f3read /Volumes/test",
+            requires: [],
+          },
+        ],
+      },
+    },
+    expectedOutput:
+      "Genuine drive: 'Verified successfully' across the full advertised capacity. Counterfeit: f3probe reports 'Real size: X GB / Announced size: Y GB' where X << Y.",
+    interpretation:
+      "Pass = drive is genuine. Fail past a threshold = counterfeit; partition only the verified portion.",
+  },
 };
 
 export const DRIVE_VARS = [
