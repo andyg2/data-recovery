@@ -25,7 +25,7 @@ import {
   FIELD_GUIDANCE,
 } from "./drive.js";
 import { parseDetectionOutput, parseStepOutput } from "./drive-parsers.js";
-import { getOutput, setOutput, clearOutput } from "./outputs.js";
+import { getOutput, setOutput, clearOutput, clearAllOutputs } from "./outputs.js";
 import { repairProcedures } from "./data/repair-procedures.js";
 import { knowledge } from "./data/knowledge.js";
 
@@ -1017,7 +1017,10 @@ els.backBtn.addEventListener("click", () => {
 });
 
 els.resetBtn.addEventListener("click", () => {
+  if (!confirm("Reset everything? This clears the diagnostic history, drive specifics, and all captured command outputs.")) return;
   reset(state);
+  drive = clearDrive();
+  clearAllOutputs();
   renderAll();
 });
 
