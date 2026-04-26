@@ -11,7 +11,10 @@ import {
   allHypotheses,
   historyCards,
   getTest,
+  outcome,
+  getFacts,
 } from "./engine.js";
+import { PREDICATE_LABELS } from "./data/predicates.js";
 import {
   procedures,
   interpolate,
@@ -46,6 +49,8 @@ let osChoice = loadOS();
 const els = {
   stage: document.getElementById("stage"),
   historyList: document.getElementById("historyList"),
+  factsList: document.getElementById("factsList"),
+  factsSection: document.getElementById("factsSection"),
   backBtn: document.getElementById("backBtn"),
   bestAction: document.getElementById("bestAction"),
   warningsList: document.getElementById("warningsList"),
@@ -121,10 +126,11 @@ function renderHistory() {
 function renderStage() {
   const next = bestNextTest(state);
   const remaining = remainingHypotheses(state);
+  const result = outcome(state);
 
   // Outcome state — no test can refine further
   if (!next || remaining.length <= 1) {
-    if (remaining.length === 1) {
+    if (result === "unique") {
       const h = remaining[0];
       els.stage.innerHTML = `
         <div class="outcome-card">
@@ -136,12 +142,20 @@ function renderStage() {
           </p>
         </div>
       `;
-    } else if (remaining.length === 0) {
+    } else if (result === "healthy") {
+      els.stage.innerHTML = `
+        <div class="outcome-card" style="border-color: var(--accent);">
+          <div class="conclusion" style="color: var(--accent);">// drive appears healthy</div>
+          <h2>No failure modes match these answers</h2>
+          <p style="color:var(--ink-dim);">Spin-up, host detection, SMART, capacity, and reads all look normal. If the user is still reporting a problem, it is likely host-side (cable, port, driver, OS volume mount, or filesystem permissions) rather than the drive itself.</p>
+        </div>
+      `;
+    } else if (result === "contradictory") {
       els.stage.innerHTML = `
         <div class="outcome-card" style="border-color: var(--bad-dim);">
           <div class="conclusion" style="color: var(--bad);">// no matching cause</div>
           <h2>Answers don't match any known pattern</h2>
-          <p style="color:var(--ink-dim);">Step back and reconsider — your answers have eliminated every hypothesis. Either an observation was misread, or this is an unusual case worth escalating.</p>
+          <p style="color:var(--ink-dim);">Step back and reconsider — your answers have eliminated every hypothesis but still indicate a problem. Either an observation was misread, or this is an unusual case worth escalating.</p>
         </div>
       `;
     } else {
@@ -718,8 +732,37 @@ function escape(s) {
   );
 }
 
+function renderFacts() {
+  const facts = getFacts(state);
+  const entries = Object.entries(facts);
+  if (entries.length === 0) {
+    els.factsSection.style.display = "none";
+    return;
+  }
+  els.factsSection.style.display = "block";
+  els.factsList.innerHTML = entries
+    .map(([key, val]) => {
+      const label = PREDICATE_LABELS[key] || key;
+      let cls = "fact";
+      let display;
+      if (val === true) {
+        cls += " fact-true";
+        display = label;
+      } else if (val === false) {
+        cls += " fact-false";
+        display = `no ${label}`;
+      } else {
+        cls += ` fact-${val}`;
+        display = `${label}: ${val}`;
+      }
+      return `<li class="${cls}">${escape(display)}</li>`;
+    })
+    .join("");
+}
+
 function renderAll() {
   renderHistory();
+  renderFacts();
   renderStage();
   renderBestAction();
   renderWarnings();

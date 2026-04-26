@@ -2,6 +2,11 @@ import { hypotheses, hypothesisById } from "./data/hypotheses.js";
 import { tests, testById } from "./data/tests.js";
 import { actions } from "./data/actions.js";
 import { warnings, warningPredicates } from "./data/warnings.js";
+import {
+  mergeEstablishes,
+  requirementsMet,
+  deriveOutcome,
+} from "./data/predicates.js";
 
 // Risk multiplier — higher risk tests get penalised when the remaining
 // hypothesis set already contains mechanical failures.
@@ -20,21 +25,25 @@ export function createState(mode = "technician") {
     mode,
     history: [], // [{ testId, answerId }]
     eliminated: new Set(),
+    facts: {},
   };
 }
 
-// Recompute eliminated set from history. Cheap, idempotent, lets us go backward
-// by simply popping history and recomputing.
+// Recompute eliminated set + facts from history. Cheap, idempotent, lets us go
+// backward by simply popping history and recomputing.
 export function recompute(state) {
   const eliminated = new Set();
+  let facts = {};
   for (const { testId, answerId } of state.history) {
     const test = testById[testId];
     if (!test) continue;
     const answer = test.answers.find((a) => a.id === answerId);
     if (!answer) continue;
     for (const h of answer.eliminates) eliminated.add(h);
+    facts = mergeEstablishes(facts, answer.establishes);
   }
   state.eliminated = eliminated;
+  state.facts = facts;
   return state;
 }
 
@@ -93,7 +102,7 @@ export function bestNextTest(state) {
 
   const askedTestIds = new Set(state.history.map((h) => h.testId));
   const candidates = visibleTests(state.mode).filter(
-    (t) => !askedTestIds.has(t.id),
+    (t) => !askedTestIds.has(t.id) && requirementsMet(t, state.facts),
   );
 
   // Apply risk penalty: if mechanical failure is suspected, deprioritise risky tests.
@@ -148,6 +157,14 @@ export function activeWarnings(state) {
   });
 }
 
+// --- Outcome ---------------------------------------------------------------
+// Wraps deriveOutcome with the engine's view of next-test availability.
+export function outcome(state) {
+  const remaining = remainingHypotheses(state);
+  const hasNextTest = !!bestNextTest(state);
+  return deriveOutcome({ remaining, hasNextTest, facts: state.facts });
+}
+
 // --- Display helpers -------------------------------------------------------
 export function getTest(testId) {
   return testById[testId];
@@ -157,6 +174,9 @@ export function getHypothesis(id) {
 }
 export function allHypotheses(state) {
   return visibleHypotheses(state.mode);
+}
+export function getFacts(state) {
+  return state.facts || {};
 }
 
 export function historyCards(state) {

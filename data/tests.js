@@ -22,6 +22,7 @@ export const tests = [
       {
         id: "normal",
         label: "Normal - quiet spin-up, no clicking",
+        establishes: { spinsUp: true, healthSignal: "positive" },
         eliminates: [
           "head_crash",
           "stiction_seized_motor",
@@ -36,6 +37,7 @@ export const tests = [
       {
         id: "clicking",
         label: "Clicking, beeping, or repeating seek noise",
+        establishes: { spinsUp: true, healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -62,6 +64,7 @@ export const tests = [
       {
         id: "silent",
         label: "Silent - no spin-up at all",
+        establishes: { spinsUp: false, healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -98,6 +101,7 @@ export const tests = [
       {
         id: "grinding",
         label: "Grinding or scraping",
+        establishes: { spinsUp: true, healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -136,10 +140,12 @@ export const tests = [
     detail:
       "Boot into BIOS/UEFI and check whether the drive is identified, and whether the capacity matches the label.",
     risk: "low",
+    requires: { spinsUp: true },
     answers: [
       {
         id: "correct",
         label: "Detected correctly, full capacity",
+        establishes: { idsToHost: true, healthSignal: "positive" },
         eliminates: [
           "pcb_failure",
           "firmware_sa_corruption",
@@ -161,6 +167,7 @@ export const tests = [
       {
         id: "wrong",
         label: "Detected, but wrong model or capacity",
+        establishes: { idsToHost: true, healthSignal: "concerning" },
         eliminates: [
           "pcb_failure",
           "logical_corruption",
@@ -182,6 +189,7 @@ export const tests = [
       {
         id: "not_detected",
         label: "Not detected at all",
+        establishes: { idsToHost: false, healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -212,15 +220,18 @@ export const tests = [
     detail:
       "Disconnect the PCB, clean the contact pads with isopropyl alcohol and a pencil eraser, reseat, and retest.",
     risk: "medium",
+    requires: { idsToHost: false },
     answers: [
       {
         id: "fixed",
         label: "Yes, drive now IDs correctly",
+        establishes: { idsToHost: true, healthSignal: "positive" },
         eliminates: ["pcb_failure", "firmware_sa_corruption", "head_crash"],
       },
       {
         id: "still_fails",
         label: "No, still fails to ID",
+        establishes: { idsToHost: false },
         eliminates: ["preamp_contact_issue"],
       },
     ],
@@ -232,10 +243,12 @@ export const tests = [
     detail:
       "Use a tool like CrystalDiskInfo or smartctl. Look at reallocated, pending, and uncorrectable sector counts.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "pass",
         label: "All values nominal",
+        establishes: { healthSignal: "positive" },
         eliminates: [
           "head_degradation",
           "firmware_sa_corruption",
@@ -248,6 +261,7 @@ export const tests = [
       {
         id: "fail_sectors",
         label: "Reallocated / pending sectors flagged",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "pcb_failure",
@@ -259,6 +273,7 @@ export const tests = [
       {
         id: "fail_unreadable",
         label: "S.M.A.R.T. data is unreadable",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -276,10 +291,12 @@ export const tests = [
     detail:
       "Use Linux-based ddrescue or HDDSuperClone — they handle bad sectors gracefully. Avoid Clonezilla / dd, which give up on errors.",
     risk: "medium",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "clean",
         label: "Completes cleanly or with minimal bad sectors",
+        establishes: { cloneAvailable: true, healthSignal: "positive" },
         eliminates: [
           "head_degradation",
           "head_crash",
@@ -303,6 +320,7 @@ export const tests = [
       {
         id: "partial",
         label: "Slow, many unread sectors, eventually completes",
+        establishes: { cloneAvailable: true, healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -318,6 +336,7 @@ export const tests = [
       {
         id: "fails",
         label: "Fails — drive drops out, hangs, or aborts",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -334,15 +353,18 @@ export const tests = [
       "After cloning, does a filesystem recovery scan (R-Studio / UFS Explorer) find the data?",
     detail: "Run the scan against the CLONE, never the original drive.",
     risk: "none",
+    requires: { cloneAvailable: true },
     answers: [
       {
         id: "success",
         label: "Yes — files recovered",
+        establishes: { healthSignal: "positive" },
         eliminates: ["head_crash", "platter_damage", "firmware_sa_corruption"],
       },
       {
         id: "fail",
         label: "No — scan fails or finds nothing usable",
+        establishes: { healthSignal: "concerning" },
         eliminates: ["logical_corruption", "bad_sectors_minor"],
       },
     ],
@@ -357,10 +379,12 @@ export const tests = [
     detail:
       "Cross-reference the PCB part number, transfer the ROM chip or BIOS adaptives, and retest.",
     risk: "low",
+    requires: { idsToHost: false },
     answers: [
       {
         id: "ids",
         label: "Yes, drive IDs correctly",
+        establishes: { idsToHost: true, healthSignal: "positive" },
         eliminates: [
           "firmware_sa_corruption",
           "head_crash",
@@ -370,6 +394,7 @@ export const tests = [
       {
         id: "still_fails",
         label: "No, still fails",
+        establishes: { idsToHost: false },
         eliminates: ["pcb_failure"],
       },
     ],
@@ -381,15 +406,18 @@ export const tests = [
     detail:
       "Run the per-head test in PC-3000 utilities. Note which heads pass and which fail.",
     risk: "medium",
+    requires: { spinsUp: true },
     answers: [
       {
         id: "all_pass",
         label: "All heads pass",
+        establishes: { healthSignal: "positive" },
         eliminates: ["head_crash", "head_degradation"],
       },
       {
         id: "some_fail",
         label: "Some heads fail",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "pcb_failure",
@@ -410,11 +438,13 @@ export const tests = [
       {
         id: "clean",
         label: "Platters clean, no visible damage",
+        establishes: { healthSignal: "positive" },
         eliminates: ["platter_damage"],
       },
       {
         id: "damaged",
         label: "Visible scratches, rings, or contamination",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -447,6 +477,7 @@ export const tests = [
       {
         id: "power_surge",
         label: "Power surge, wrong adapter, or PSU failure",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -462,6 +493,7 @@ export const tests = [
       {
         id: "drop_or_impact",
         label: "Dropped or hit while running",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -478,6 +510,7 @@ export const tests = [
       {
         id: "liquid_or_corrosion",
         label: "Water, condensation, or visible corrosion",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -504,6 +537,7 @@ export const tests = [
       {
         id: "thermal_event",
         label: "Hot car / attic / fire-adjacent / extreme heat exposure",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -518,6 +552,7 @@ export const tests = [
         id: "power_loss_during_write",
         label:
           "Sudden power loss during a heavy write (file copy, large download)",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "stiction_seized_motor",
           "platter_damage",
@@ -533,6 +568,7 @@ export const tests = [
         id: "wrong_adapter",
         label:
           "Wrong barrel-jack adapter, reverse polarity, or low-power USB hub",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -561,6 +597,7 @@ export const tests = [
       {
         id: "shorted",
         label: "One or both TVS diodes test shorted",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -596,15 +633,18 @@ export const tests = [
     detail:
       "On Linux: `sudo hdparm -I /dev/sdX | grep -A8 Security`. On Windows use Victoria or HDD Sentinel. Look at the locked / enabled / frozen flags.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "not_enabled",
         label: "Security: not enabled, not locked",
+        establishes: { healthSignal: "positive" },
         eliminates: ["ata_password_locked"],
       },
       {
         id: "enabled_locked",
         label: "Security: enabled, locked",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -643,15 +683,18 @@ export const tests = [
     detail:
       "Compare `hdparm -I`/`Get-PhysicalDisk` size against the model's spec. Mismatched capacity is a strong signal for HPA/DCO or SA corruption.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "matches",
         label: "Yes, full advertised capacity",
+        establishes: { healthSignal: "positive" },
         eliminates: ["hpa_dco_misconfigured"],
       },
       {
         id: "smaller_round",
         label: "Smaller, but a clean round number (looks like HPA)",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -666,6 +709,7 @@ export const tests = [
       {
         id: "wrong_garbage",
         label: "Wildly wrong (0, 1.4GB, garbage values)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -687,15 +731,18 @@ export const tests = [
     detail:
       "Linux: `sudo dd if=${DEVICE} of=/dev/null bs=512 count=1`. Captures whether the drive can serve any data at all.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "data",
         label: "Real data (1 sector copied, no error)",
+        establishes: { healthSignal: "positive" },
         eliminates: ["translator_corruption", "actuator_coil_open"],
       },
       {
         id: "zeros",
         label: "Zeros, despite the drive identifying correctly",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -709,6 +756,7 @@ export const tests = [
       {
         id: "io_error",
         label: "I/O error or hang",
+        establishes: { healthSignal: "broken" },
         eliminates: ["logical_corruption", "ata_password_locked"],
       },
     ],
@@ -722,15 +770,18 @@ export const tests = [
     detail:
       "Healthy drives produce a single soft seek immediately after spin-up. Total silence after spin-up points at actuator coil failure.",
     risk: "low",
+    requires: { spinsUp: true },
     answers: [
       {
         id: "normal_seeks",
         label: "Yes - normal seek sound, single soft click",
+        establishes: { seeksHeads: true, healthSignal: "positive" },
         eliminates: ["actuator_coil_open"],
       },
       {
         id: "silent_after_spin",
         label: "Spins to full RPM and stays silent - no head movement",
+        establishes: { seeksHeads: false, healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -748,6 +799,7 @@ export const tests = [
       {
         id: "did_not_spin",
         label: "Drive never spun up (skip this question)",
+        establishes: { spinsUp: false },
         eliminates: [],
       },
     ],
@@ -761,6 +813,7 @@ export const tests = [
     detail:
       "Helium drives are typically 8TB+ enterprise SKUs (HGST He, WD Ultrastar, Seagate Exos). The model label, datasheet, or smartctl will say. Attribute 22 starts at 100 and counts down as helium escapes.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "not_helium",
@@ -770,11 +823,13 @@ export const tests = [
       {
         id: "helium_full",
         label: "Helium drive, attribute 22 reads 100",
+        establishes: { driveTech: "helium", healthSignal: "positive" },
         eliminates: ["helium_leak"],
       },
       {
         id: "helium_low",
         label: "Helium drive, attribute 22 below 100",
+        establishes: { driveTech: "helium", healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -799,10 +854,12 @@ export const tests = [
     detail:
       "If a plain donor PCB swap failed, read the original ROM with a CH341A programmer and write it to the donor's flash chip. Re-test detection.",
     risk: "low",
+    requires: { idsToHost: false },
     answers: [
       {
         id: "ids_now",
         label: "Yes, drive IDs correctly with transferred ROM",
+        establishes: { idsToHost: true, healthSignal: "positive" },
         eliminates: [
           "rom_nvram_corruption",
           "firmware_sa_corruption",
@@ -813,11 +870,13 @@ export const tests = [
       {
         id: "still_fails",
         label: "No, still fails to ID with transferred ROM",
+        establishes: { idsToHost: false },
         eliminates: ["rom_nvram_corruption"],
       },
       {
         id: "rom_unreadable",
         label: "Original ROM reads as garbage / all-FF",
+        establishes: { idsToHost: false, healthSignal: "broken" },
         eliminates: [
           "pcb_failure",
           "logical_corruption",
@@ -843,6 +902,7 @@ export const tests = [
       {
         id: "internal_drive",
         label: "Drive is internal / bare SATA - shuck test does not apply",
+        establishes: { isExternal: false },
         eliminates: [
           "usb_bridge_failure",
           "encrypted_bridge_keyloss",
@@ -852,6 +912,11 @@ export const tests = [
       {
         id: "ids_when_shucked",
         label: "External drive - identifies normally on direct SATA",
+        establishes: {
+          isExternal: true,
+          idsToHost: true,
+          healthSignal: "positive",
+        },
         eliminates: [
           "pcb_failure",
           "tvs_diode_short",
@@ -870,6 +935,11 @@ export const tests = [
         id: "ids_but_random",
         label:
           "External drive - identifies on direct SATA but data is unreadable random noise",
+        establishes: {
+          isExternal: true,
+          idsToHost: true,
+          healthSignal: "concerning",
+        },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -890,6 +960,11 @@ export const tests = [
       {
         id: "still_dead_when_shucked",
         label: "External drive - still dead on direct SATA",
+        establishes: {
+          isExternal: true,
+          idsToHost: false,
+          healthSignal: "broken",
+        },
         eliminates: ["usb_bridge_failure", "encrypted_bridge_keyloss"],
       },
     ],
@@ -903,11 +978,13 @@ export const tests = [
     detail:
       "Read LBA 0 through ~16MB. Look for filesystem magic bytes (NTFS, FAT, ext, HFS+, APFS), encryption headers (BitLocker '-FVE-FS-', LUKS magic, FileVault encrdsa), or uniformly random data with no structure at all.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "normal_filesystem",
         label:
           "Normal filesystem signature (NTFS, FAT, ext, HFS+, APFS, exFAT)",
+        establishes: { healthSignal: "positive" },
         eliminates: [
           "encrypted_bridge_keyloss",
           "host_software_encryption",
@@ -918,6 +995,7 @@ export const tests = [
       {
         id: "bitlocker",
         label: "BitLocker signature ('-FVE-FS-' at offset 3 of partition)",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -965,6 +1043,7 @@ export const tests = [
       {
         id: "luks_or_filevault",
         label: "LUKS, FileVault, or APFS-encrypted header",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1013,6 +1092,7 @@ export const tests = [
         id: "raid_or_lvm",
         label:
           "RAID metadata, LVM 'LABELONE', ZFS, or other non-standard structure",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "host_software_encryption",
@@ -1025,6 +1105,7 @@ export const tests = [
         id: "uniform_random",
         label:
           "Uniform high-entropy random data, no recognizable structure anywhere sampled",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1039,6 +1120,7 @@ export const tests = [
       {
         id: "all_zeros",
         label: "All zeros despite drive identifying",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1058,21 +1140,25 @@ export const tests = [
     detail:
       "Plug into a modern desktop or a UASP-capable USB3 dock. Old hosts cap at 137GB (28-bit LBA), 2.0TB (BIOS), or 2.2TB (MBR partitioning). Some cheap USB-SATA bridges silently truncate above 2TB.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "full_capacity",
         label: "Yes - full capacity on modern host",
+        establishes: { healthSignal: "positive" },
         eliminates: ["capacity_barrier_host"],
       },
       {
         id: "still_truncated",
         label: "No - still truncated on modern host",
+        establishes: { healthSignal: "concerning" },
         eliminates: ["capacity_barrier_host"],
       },
       {
         id: "round_limit",
         label:
           "Reports a round limit (137GB / 2.0TB / 2.2TB) on the original host but the right size on a modern host",
+        establishes: { healthSignal: "positive" },
         eliminates: [
           "hpa_dco_misconfigured",
           "firmware_sa_corruption",
@@ -1103,6 +1189,7 @@ export const tests = [
       {
         id: "regular_cmr",
         label: "Regular CMR HDD - genuine, well-known model",
+        establishes: { driveTech: "cmr" },
         eliminates: [
           "sshd_cache_failure",
           "smr_write_zone_corruption",
@@ -1112,6 +1199,7 @@ export const tests = [
       {
         id: "is_sshd",
         label: "SSHD (hybrid HDD with NAND cache)",
+        establishes: { driveTech: "sshd" },
         eliminates: [
           "smr_write_zone_corruption",
           "counterfeit_capacity_spoofed",
@@ -1121,6 +1209,7 @@ export const tests = [
       {
         id: "is_smr",
         label: "SMR (shingled magnetic recording) drive",
+        establishes: { driveTech: "smr" },
         eliminates: [
           "sshd_cache_failure",
           "counterfeit_capacity_spoofed",
@@ -1131,6 +1220,7 @@ export const tests = [
         id: "suspect_counterfeit",
         label:
           "Suspect counterfeit - cheap marketplace, weight wrong, model not on manufacturer's site",
+        establishes: { driveTech: "counterfeit", healthSignal: "concerning" },
         eliminates: [
           "sshd_cache_failure",
           "smr_write_zone_corruption",
@@ -1147,10 +1237,12 @@ export const tests = [
     detail:
       "Cool the drive in a sealed bag in the fridge for 30 minutes (do NOT freezer - condensation), or warm it on a 30-35C seedling mat. Note whether reads succeed or fail in each state. Strong correlation = thermal-window failure.",
     risk: "medium",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "works_cold",
         label: "Works cold, fails warm",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "ata_password_locked",
@@ -1169,6 +1261,7 @@ export const tests = [
       {
         id: "works_warm",
         label: "Works warm, fails cold",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "ata_password_locked",
@@ -1200,10 +1293,12 @@ export const tests = [
     detail:
       "The cadence distinguishes failure modes that all 'sound like a problem' but are different. Use a phone audio recorder if you need to count - the rate matters.",
     risk: "low",
+    requires: { spinsUp: true },
     answers: [
       {
         id: "rapid_clicking",
         label: "Rapid clicking (1-3 per second, persistent)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1226,6 +1321,7 @@ export const tests = [
         id: "slow_recal",
         label:
           "Slow rhythmic seek (~1 every 8-30 seconds), drive may eventually ID",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1246,6 +1342,7 @@ export const tests = [
       {
         id: "load_retract_cycle",
         label: "Slow load-retract-load every 1-3 seconds (rhythmic, not rapid)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1267,6 +1364,7 @@ export const tests = [
         id: "irregular_oscillating",
         label:
           "Irregular: overshoot, oscillation, hunting (not rhythmic at all)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1304,10 +1402,12 @@ export const tests = [
     detail:
       "Run `dd if=${DEVICE} of=/dev/null bs=512 count=1` first - this skips kernel SMART probing. Then run `smartctl -a ${DEVICE}`. A hang on smartctl while dd works points at log structure corruption.",
     risk: "low",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "smart_hangs_dd_works",
         label: "smartctl hangs/errors but dd succeeds and returns real data",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "head_crash",
@@ -1324,11 +1424,13 @@ export const tests = [
       {
         id: "both_work",
         label: "Both succeed normally",
+        establishes: { healthSignal: "positive" },
         eliminates: ["smart_log_corruption_lockout"],
       },
       {
         id: "both_fail",
         label: "Both fail",
+        establishes: { healthSignal: "broken" },
         eliminates: ["smart_log_corruption_lockout", "logical_corruption"],
       },
     ],
@@ -1342,10 +1444,12 @@ export const tests = [
     detail:
       "Use `dd if=${DEVICE} of=/dev/null bs=1M count=64 skip=N status=progress` at five widely-spaced offsets. Look for: uniform (within 2x at every offset), patchy (some fast, some slow, some fail), or plateau (all uniformly 1-10 MB/s with no SMART events).",
     risk: "medium",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "uniform_full_speed",
         label: "Uniform full platform speed everywhere (80-200+ MB/s)",
+        establishes: { healthSignal: "positive" },
         eliminates: [
           "bad_sectors_major",
           "head_degradation",
@@ -1359,6 +1463,7 @@ export const tests = [
       {
         id: "uniform_slow",
         label: "Uniform 1-10 MB/s everywhere with NO SMART event growth",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1373,6 +1478,7 @@ export const tests = [
       {
         id: "patchy",
         label: "Patchy - some offsets fast, some slow or failing, irregular",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "plist_corruption_remap_loop",
@@ -1385,6 +1491,7 @@ export const tests = [
         id: "striped_pattern",
         label:
           "Repeating bands - good band, fail band, good, fail (regular size)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1409,15 +1516,18 @@ export const tests = [
     detail:
       "Run a few hours of ddrescue first. Open the mapfile in ddrescueview or count regions with `ddrescuelog -t mapfile`. Stripes with consistent good-band + bad-band sizes mean specific heads are dead - the stripe period equals the per-head allocation size.",
     risk: "medium",
+    requires: { cloneAvailable: true },
     answers: [
       {
         id: "random_distribution",
         label: "Random, scattered bad sectors with no pattern",
+        establishes: { healthSignal: "concerning" },
         eliminates: ["partial_head_failure"],
       },
       {
         id: "regular_stripes",
         label: "Regular repeating stripe pattern (same size good/bad bands)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1432,6 +1542,7 @@ export const tests = [
       {
         id: "single_huge_failed_region",
         label: "One large contiguous fail region, rest of drive clean",
+        establishes: { healthSignal: "broken" },
         eliminates: ["head_degradation", "translator_corruption"],
       },
     ],
@@ -1449,6 +1560,7 @@ export const tests = [
       {
         id: "irregular_with_good_coil",
         label: "Yes - irregular seeks, coil reads 4-20 ohm",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "actuator_coil_open",
           "translator_corruption",
@@ -1466,6 +1578,7 @@ export const tests = [
       {
         id: "coil_open",
         label: "Coil reads open / infinite resistance",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "magnet_dislodged_or_cracked",
@@ -1477,6 +1590,7 @@ export const tests = [
       {
         id: "coil_short",
         label: "Coil reads near zero (shorted)",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "magnet_dislodged_or_cracked",
@@ -1486,6 +1600,7 @@ export const tests = [
       {
         id: "normal_seeks_good_coil",
         label: "Normal seeks, coil reads good",
+        establishes: { healthSignal: "positive" },
         eliminates: ["actuator_coil_open", "magnet_dislodged_or_cracked"],
       },
     ],
@@ -1499,10 +1614,12 @@ export const tests = [
     detail:
       "Tap with the eraser end of a pencil over the FPC ribbon's exit point on the HDA. Listen for a momentary change in sound or symptom. A thermal cycle that produces a brief working window also indicates flex-cable / preamp solder marginality.",
     risk: "high",
+    requires: { spinsUp: true },
     answers: [
       {
         id: "tap_changes_behaviour",
         label: "Yes - tapping or thermal cycle produces a brief change",
+        establishes: { healthSignal: "concerning" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1537,6 +1654,7 @@ export const tests = [
       {
         id: "responsive_after_idle",
         label: "Yes - drive is responsive after long idle",
+        establishes: { healthSignal: "positive", idsToHost: true },
         eliminates: [
           "head_crash",
           "head_degradation",
@@ -1550,6 +1668,7 @@ export const tests = [
       {
         id: "still_unresponsive",
         label: "No - still unresponsive after 12+ hours idle",
+        establishes: { healthSignal: "broken" },
         eliminates: ["smr_write_zone_corruption"],
       },
       {
@@ -1568,16 +1687,19 @@ export const tests = [
     detail:
       "DESTRUCTIVE - only run on a drive whose data is already lost or that you suspect is counterfeit. Writes test patterns across the entire LBA range, then reads them back. Counterfeits fail past their genuine size.",
     risk: "high",
+    requires: { idsToHost: true },
     answers: [
       {
         id: "verifies_full",
         label: "Verifies clean across the full reported capacity",
+        establishes: { healthSignal: "positive" },
         eliminates: ["counterfeit_capacity_spoofed"],
       },
       {
         id: "fails_past_threshold",
         label:
           "Verifies up to a threshold (e.g. first 30 GB of a '4 TB' drive), then garbage",
+        establishes: { healthSignal: "broken" },
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1593,6 +1715,7 @@ export const tests = [
       {
         id: "all_garbage",
         label: "All reads return wrong data immediately",
+        establishes: { healthSignal: "broken" },
         eliminates: ["logical_corruption", "bad_sectors_minor"],
       },
       {
