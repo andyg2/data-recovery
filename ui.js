@@ -12,7 +12,12 @@ import {
   historyCards,
   getTest,
 } from "./engine.js";
-import { procedures, interpolate, missingVars, DRIVE_VARS } from "./data/procedures.js";
+import {
+  procedures,
+  interpolate,
+  missingVars,
+  DRIVE_VARS,
+} from "./data/procedures.js";
 import {
   loadDrive,
   saveDrive,
@@ -25,7 +30,12 @@ import {
   FIELD_GUIDANCE,
 } from "./drive.js";
 import { parseDetectionOutput, parseStepOutput } from "./drive-parsers.js";
-import { getOutput, setOutput, clearOutput, clearAllOutputs } from "./outputs.js";
+import {
+  getOutput,
+  setOutput,
+  clearOutput,
+  clearAllOutputs,
+} from "./outputs.js";
 import { repairProcedures } from "./data/repair-procedures.js";
 import { knowledge } from "./data/knowledge.js";
 
@@ -189,14 +199,14 @@ function renderProcedure(test) {
     .join("");
 
   const stepsHtml = osBlock
-    ? osBlock.steps
-        .map((step, idx) => renderStep(step, idx, test.id))
-        .join("")
+    ? osBlock.steps.map((step, idx) => renderStep(step, idx, test.id)).join("")
     : `<p style="color:var(--ink-dim); font-size:13px;">No procedure recorded for this OS.</p>`;
 
   const tools =
     osBlock && osBlock.tools && osBlock.tools.length
-      ? osBlock.tools.map((t) => `<span class="pill">${escape(t)}</span>`).join("")
+      ? osBlock.tools
+          .map((t) => `<span class="pill">${escape(t)}</span>`)
+          .join("")
       : "";
 
   return `
@@ -240,8 +250,7 @@ function renderProcedure(test) {
 
 function renderStep(step, idx, testId) {
   const missing = missingVars(step, drive);
-  const isInformational =
-    !step.command || /^#\s/.test(step.command.trim());
+  const isInformational = !step.command || /^#\s/.test(step.command.trim());
 
   if (isInformational) {
     return `
@@ -401,7 +410,11 @@ function wireProcedure() {
     const step = procedures[testId]?.os?.[osChoice]?.steps?.[stepIdx];
     const stored = getOutput(testId, stepIdx);
     if (stored && stored.rawText) {
-      const parsed = parseStepOutput(stored.rawText, step?.outputType, osChoice);
+      const parsed = parseStepOutput(
+        stored.rawText,
+        step?.outputType,
+        osChoice,
+      );
       paintOutputFindings(cap, parsed);
     }
     const saveBtn = cap.querySelector("[data-output-save]");
@@ -442,7 +455,11 @@ function showOutputStatus(cap, text, kind) {
   if (!el) return;
   el.textContent = text;
   el.style.color =
-    kind === "ok" ? "var(--accent)" : kind === "warn" ? "var(--warn)" : "var(--bad)";
+    kind === "ok"
+      ? "var(--accent)"
+      : kind === "warn"
+        ? "var(--warn)"
+        : "var(--bad)";
 }
 
 function paintOutputFindings(cap, parsed) {
@@ -457,7 +474,9 @@ function paintOutputFindings(cap, parsed) {
 
   // Records (drive_list / drive_info): clickable rows that fill four vars at once.
   if (parsed.records && parsed.records.length) {
-    parts.push(`<div class="findings-head">Click a drive to set DEVICE / MODEL / SERIAL / CAPACITY:</div>`);
+    parts.push(
+      `<div class="findings-head">Click a drive to set DEVICE / MODEL / SERIAL / CAPACITY:</div>`,
+    );
     parts.push(
       parsed.records
         .map(
@@ -510,7 +529,11 @@ function paintOutputFindings(cap, parsed) {
         const rec = parsed.records[Number(btn.dataset.pickRecord)];
         Object.assign(drive, rec.fields);
         saveDrive(drive);
-        showOutputStatus(cap, `Filled DEVICE / MODEL / SERIAL / CAPACITY from ${rec.fields.DEVICE}.`, "ok");
+        showOutputStatus(
+          cap,
+          `Filled DEVICE / MODEL / SERIAL / CAPACITY from ${rec.fields.DEVICE}.`,
+          "ok",
+        );
         renderAll();
       });
     }
@@ -543,7 +566,8 @@ function renderBestAction() {
       confident.severity === "lab" ||
       confident.severity === "lab-cleanroom" ||
       confident.severity === "unrecoverable";
-    const hasPlaybook = confident.playbook && repairProcedures[confident.playbook];
+    const hasPlaybook =
+      confident.playbook && repairProcedures[confident.playbook];
     els.bestAction.innerHTML = `
       <div class="best-action ${isLab ? "lab" : ""}">
         <h3>${isLab ? "⚑ Recommended action" : "✓ Recommended action"}</h3>
@@ -706,7 +730,9 @@ function renderAll() {
 }
 
 function renderDriveStatus() {
-  const filled = DRIVE_VARS.filter((k) => drive[k] && drive[k].length > 0).length;
+  const filled = DRIVE_VARS.filter(
+    (k) => drive[k] && drive[k].length > 0,
+  ).length;
   els.driveStatus.innerHTML =
     filled === 0
       ? `<span style="color:var(--ink-faint);">(empty)</span>`
@@ -730,7 +756,8 @@ function renderDrawer(focusKey) {
   const parserHints = {
     windows: {
       summary: "Paste Get-PhysicalDisk output",
-      command: "Get-PhysicalDisk | Format-List DeviceId,FriendlyName,SerialNumber,Size,MediaType,BusType,SpindleSpeed,FirmwareVersion,HealthStatus",
+      command:
+        "Get-PhysicalDisk | Format-List DeviceId,FriendlyName,SerialNumber,Size,MediaType,BusType,SpindleSpeed,FirmwareVersion,HealthStatus",
       placeholder:
         "DeviceId     : 0\nFriendlyName : ...\nSerialNumber : ...\nSize         : ...",
     },
@@ -1017,7 +1044,12 @@ els.backBtn.addEventListener("click", () => {
 });
 
 els.resetBtn.addEventListener("click", () => {
-  if (!confirm("Reset everything? This clears the diagnostic history, drive specifics, and all captured command outputs.")) return;
+  if (
+    !confirm(
+      "Reset everything? This clears the diagnostic history, drive specifics, and all captured command outputs.",
+    )
+  )
+    return;
   reset(state);
   drive = clearDrive();
   clearAllOutputs();

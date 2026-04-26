@@ -59,8 +59,16 @@ export const repairProcedures = {
         cost_usd: "80-130",
         alternative: "Butane iron + flux ($15)",
       },
-      { name: "Multimeter with continuity beep", cost_usd: "20", alternative: "" },
-      { name: "Flux pen + 0.5mm leaded solder", cost_usd: "15", alternative: "" },
+      {
+        name: "Multimeter with continuity beep",
+        cost_usd: "20",
+        alternative: "",
+      },
+      {
+        name: "Flux pen + 0.5mm leaded solder",
+        cost_usd: "15",
+        alternative: "",
+      },
     ],
     steps: [
       {
@@ -77,8 +85,7 @@ export const repairProcedures = {
       },
       {
         label: "ESD ground yourself",
-        detail:
-          "Wrist strap to mains earth or ESD mat. Do not work on carpet.",
+        detail: "Wrist strap to mains earth or ESD mat. Do not work on carpet.",
         risk: "low",
       },
       {
@@ -154,7 +161,8 @@ export const repairProcedures = {
         name: "SMBJ5.0A (5V rail TVS) - SMB package",
         source: "Digi-Key / Mouser / LCSC",
         cost_usd: "0.50",
-        matching: "Optional - drive will run without it (sacrificial protection).",
+        matching:
+          "Optional - drive will run without it (sacrificial protection).",
       },
       {
         name: "SMBJ12A (12V rail TVS) - SMB package",
@@ -164,7 +172,11 @@ export const repairProcedures = {
       },
     ],
     tools: [
-      { name: "Multimeter with diode/continuity mode", cost_usd: "20", alternative: "" },
+      {
+        name: "Multimeter with diode/continuity mode",
+        cost_usd: "20",
+        alternative: "",
+      },
       {
         name: "Fine-tip soldering iron or hot air at 350C",
         cost_usd: "15-80",
@@ -253,7 +265,7 @@ export const repairProcedures = {
         source: "HDDSurgery (professional sets), various Chinese sellers",
         cost_usd: "40-300",
         matching:
-          "WD 3.5\" comb fits most modern WDs; Seagate combs are family-specific; 2.5\" combs are different and more fragile.",
+          'WD 3.5" comb fits most modern WDs; Seagate combs are family-specific; 2.5" combs are different and more fragile.',
       },
     ],
     tools: [
@@ -263,7 +275,11 @@ export const repairProcedures = {
         alternative:
           "DIY HEPA box (Tier 2 in the Reference > Clean environment guide). NOT a steamy bathroom for HSA work.",
       },
-      { name: "Anti-static gloves (powder-free nitrile)", cost_usd: "10", alternative: "" },
+      {
+        name: "Anti-static gloves (powder-free nitrile)",
+        cost_usd: "10",
+        alternative: "",
+      },
       {
         name: "T6/T7/T8 Torx drivers, magnetized",
         cost_usd: "15-50",
@@ -371,7 +387,11 @@ export const repairProcedures = {
         cost_usd: "10",
         alternative: "Phone macro mode",
       },
-      { name: "Phone camera for documentation", cost_usd: "0", alternative: "" },
+      {
+        name: "Phone camera for documentation",
+        cost_usd: "0",
+        alternative: "",
+      },
     ],
     steps: [
       {
@@ -585,7 +605,7 @@ export const repairProcedures = {
         source: "Amazon, AliExpress (Sabrent, ORICO, Inateck)",
         cost_usd: "10-25",
         matching:
-          "Match the original drive's interface (SATA 3.5\" or 2.5\"). Avoid encrypted enclosures unless you specifically want encryption again.",
+          'Match the original drive\'s interface (SATA 3.5" or 2.5"). Avoid encrypted enclosures unless you specifically want encryption again.',
       },
     ],
     tools: [
@@ -725,7 +745,8 @@ export const repairProcedures = {
         risk: "high",
       },
       {
-        label: "Reassemble: patient drive into donor enclosure with patched bridge",
+        label:
+          "Reassemble: patient drive into donor enclosure with patched bridge",
         detail:
           "Connect the patient SATA drive to the donor's bridge. Plug into a USB host.",
         risk: "medium",
@@ -757,7 +778,11 @@ export const repairProcedures = {
     risk_to_data: "low",
     parts: [],
     tools: [
-      { name: "Linux live USB with cryptsetup, dislocker", cost_usd: "0", alternative: "" },
+      {
+        name: "Linux live USB with cryptsetup, dislocker",
+        cost_usd: "0",
+        alternative: "",
+      },
       { name: "Microsoft account access", cost_usd: "0", alternative: "" },
       { name: "Apple ID / iCloud access", cost_usd: "0", alternative: "" },
     ],
@@ -825,7 +850,11 @@ export const repairProcedures = {
     risk_to_data: "medium",
     parts: [],
     tools: [
-      { name: "Linux live USB (Ubuntu / SystemRescue / Hiren's PE)", cost_usd: "0", alternative: "" },
+      {
+        name: "Linux live USB (Ubuntu / SystemRescue / Hiren's PE)",
+        cost_usd: "0",
+        alternative: "",
+      },
       {
         name: "TestDisk + PhotoRec (read-only signature scan)",
         cost_usd: "0",
@@ -839,7 +868,8 @@ export const repairProcedures = {
     ],
     steps: [
       {
-        label: "STOP - do not click any 'initialize' / 'format' / 'repair' prompt",
+        label:
+          "STOP - do not click any 'initialize' / 'format' / 'repair' prompt",
         detail:
           "Windows aggressively prompts to initialize unrecognized disks. Clicking 'Yes' overwrites the GPT/MBR with a fresh empty one. The data is recoverable only if you stop here.",
         risk: "high",
@@ -916,7 +946,8 @@ export const repairProcedures = {
         name: "Vacuum-seal bags or zip-locks with one-way valves",
         source: "Amazon",
         cost_usd: "5-10",
-        matching: "Critical for preventing condensation on the PCB during cold cycles.",
+        matching:
+          "Critical for preventing condensation on the PCB during cold cycles.",
       },
       {
         name: "Silica gel desiccant pouches",
@@ -928,7 +959,8 @@ export const repairProcedures = {
         name: "Seedling heat mat with thermostat (warm-fail variant)",
         source: "Amazon / garden centre",
         cost_usd: "20-30",
-        matching: "Set 30-35C maximum. Higher temperatures damage healthy drives.",
+        matching:
+          "Set 30-35C maximum. Higher temperatures damage healthy drives.",
       },
     ],
     tools: [
@@ -937,7 +969,11 @@ export const repairProcedures = {
         cost_usd: "15-30",
         alternative: "smartctl temperature attribute, polled in a loop",
       },
-      { name: "Insulated cooler / lunchbag for the imaging session", cost_usd: "10-15", alternative: "" },
+      {
+        name: "Insulated cooler / lunchbag for the imaging session",
+        cost_usd: "10-15",
+        alternative: "",
+      },
       {
         name: "Small 12V or USB fan (post-cooling steady state)",
         cost_usd: "10-15",
@@ -1090,14 +1126,15 @@ export const repairProcedures = {
           "Salvage from same-model drive (donordrives.com, eBay matched, e-waste yards for older models)",
         cost_usd: "30-100 (full donor) or salvage",
         matching:
-          "Same model + similar generation. Ramp geometry varies between 2.5 and 3.5 inch and platter count - a WD 3.5\" 1-platter ramp will not fit a 4-platter drive.",
+          'Same model + similar generation. Ramp geometry varies between 2.5 and 3.5 inch and platter count - a WD 3.5" 1-platter ramp will not fit a 4-platter drive.',
       },
     ],
     tools: [
       {
         name: "T6/T8 Torx drivers (Wiha or Wera)",
         cost_usd: "30-50",
-        alternative: "Cheap bits strip the small screws - do not compromise here",
+        alternative:
+          "Cheap bits strip the small screws - do not compromise here",
       },
       {
         name: "Plastic spudger / non-marring pry tool",
@@ -1234,8 +1271,7 @@ export const repairProcedures = {
       },
       {
         label: "Pre-flight the clean environment",
-        detail:
-          "Same as parking ramp swap. Run hood, wipe surfaces, full PPE.",
+        detail: "Same as parking ramp swap. Run hood, wipe surfaces, full PPE.",
         risk: "high",
       },
       {
@@ -1292,11 +1328,16 @@ export const repairProcedures = {
     tools: [
       { name: "h2testw (Windows, free)", cost_usd: "0", alternative: "" },
       { name: "f3 (Linux/macOS, free)", cost_usd: "0", alternative: "" },
-      { name: "fdisk / gdisk for re-partitioning", cost_usd: "0", alternative: "" },
+      {
+        name: "fdisk / gdisk for re-partitioning",
+        cost_usd: "0",
+        alternative: "",
+      },
     ],
     steps: [
       {
-        label: "Back up any data the user wrote that fits in the first ~10% of capacity",
+        label:
+          "Back up any data the user wrote that fits in the first ~10% of capacity",
         detail:
           "Counterfeits typically have a small genuine region (32 GB to 1 TB) and report something much larger. Anything stored in the first few GB is on real media; everything past the boundary is gone.",
         risk: "high",
@@ -1326,7 +1367,8 @@ export const repairProcedures = {
         risk: "low",
       },
       {
-        label: "Mark the drive clearly so it's not accidentally used at full advertised size",
+        label:
+          "Mark the drive clearly so it's not accidentally used at full advertised size",
         detail:
           "Sticker on top with the real capacity. Donate it to non-critical use.",
         risk: "low",

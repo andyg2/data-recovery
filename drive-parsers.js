@@ -20,7 +20,9 @@ function formatBytes(s) {
   if (!n || isNaN(n)) return "";
   if (n >= 1e12) {
     const tb = n / 1e12;
-    return (tb >= 10 ? Math.round(tb) : tb.toFixed(1).replace(/\.0$/, "")) + " TB";
+    return (
+      (tb >= 10 ? Math.round(tb) : tb.toFixed(1).replace(/\.0$/, "")) + " TB"
+    );
   }
   if (n >= 1e9) return Math.round(n / 1e9) + " GB";
   if (n >= 1e6) return Math.round(n / 1e6) + " MB";
@@ -33,7 +35,10 @@ function formatBytes(s) {
 // terminal where line breaks are lost.
 function parsePowerShell(text) {
   const allKeys = PS_KEYS.join("|");
-  const re = new RegExp(`(${allKeys})\\s*:\\s*(.*?)(?=(?:${allKeys})\\s*:|$)`, "gs");
+  const re = new RegExp(
+    `(${allKeys})\\s*:\\s*(.*?)(?=(?:${allKeys})\\s*:|$)`,
+    "gs",
+  );
   const records = [];
   let current = null;
   for (const m of text.matchAll(re)) {
@@ -78,7 +83,9 @@ function parseLsblk(text) {
     .map((l) => l.trimEnd())
     .filter((l) => l.length > 0);
   if (lines.length < 2) return [];
-  const header = lines[0].split(/\s{2,}|\t+/).map((h) => h.trim().toUpperCase());
+  const header = lines[0]
+    .split(/\s{2,}|\t+/)
+    .map((h) => h.trim().toUpperCase());
   const idx = (h) => header.indexOf(h);
   const iName = idx("NAME");
   const iModel = idx("MODEL");
@@ -123,7 +130,8 @@ function parseDiskutil(text) {
       return m ? m[1].trim() : "";
     };
     const id = get("Device Identifier");
-    const model = get("Device / Media Name") || get("Media Name") || get("Device Node");
+    const model =
+      get("Device / Media Name") || get("Media Name") || get("Device Node");
     const serial = ""; // diskutil info doesn't include serial directly
     const sizeRaw = get("Disk Size") || get("Total Size");
     const sizeMatch = sizeRaw.match(/^([\d.]+\s*[KMGT]?B)/);
@@ -181,10 +189,14 @@ function parseSmartctl(text) {
     get(/^Model Number:\s*(.+)$/m) ||
     get(/^Product:\s*(.+)$/m);
   const serial = get(/^Serial Number:\s*(.+)$/m);
-  const firmware = get(/^Firmware Version:\s*(.+)$/m) || get(/^Revision:\s*(.+)$/m);
-  const capRaw = get(/^User Capacity:\s*(.+)$/m) || get(/^Total NVM Capacity:\s*(.+)$/m);
+  const firmware =
+    get(/^Firmware Version:\s*(.+)$/m) || get(/^Revision:\s*(.+)$/m);
+  const capRaw =
+    get(/^User Capacity:\s*(.+)$/m) || get(/^Total NVM Capacity:\s*(.+)$/m);
   const capMatch = capRaw.match(/\[(.+?)\]/);
-  const capacity = capMatch ? capMatch[1] : (capRaw.match(/^([\d.,]+\s*[KMGT]?B)/) || [, ""])[1];
+  const capacity = capMatch
+    ? capMatch[1]
+    : (capRaw.match(/^([\d.,]+\s*[KMGT]?B)/) || [, ""])[1];
 
   const healthRaw =
     get(/^SMART overall-health self-assessment test result:\s*(\w+)/m) ||
@@ -209,18 +221,15 @@ function parseSmartctl(text) {
   const findings = [];
   if (model) findings.push({ key: "MODEL", label: "Model", value: model });
   if (serial) findings.push({ key: "SERIAL", label: "Serial", value: serial });
-  if (capacity) findings.push({ key: "CAPACITY", label: "Capacity", value: capacity });
-  if (firmware) findings.push({ key: null, label: "Firmware", value: firmware });
+  if (capacity)
+    findings.push({ key: "CAPACITY", label: "Capacity", value: capacity });
+  if (firmware)
+    findings.push({ key: null, label: "Firmware", value: firmware });
   if (health) findings.push({ key: null, label: "Health", value: health });
 
   for (const [k, v] of Object.entries(attrs)) {
     if (v !== "") {
-      const flag =
-        Number(v) > 0
-          ? k === "udma_crc"
-            ? "info"
-            : "warn"
-          : "ok";
+      const flag = Number(v) > 0 ? (k === "udma_crc" ? "info" : "warn") : "ok";
       findings.push({
         key: null,
         label: k.replace(/_/g, " "),
@@ -235,10 +244,9 @@ function parseSmartctl(text) {
   return {
     format: "smartctl",
     findings,
-    summary:
-      health
-        ? `S.M.A.R.T. ${health.toUpperCase()}${attrs.pending ? ` - ${attrs.pending} pending` : ""}${attrs.reallocated ? `, ${attrs.reallocated} reallocated` : ""}`
-        : `S.M.A.R.T. attributes captured`,
+    summary: health
+      ? `S.M.A.R.T. ${health.toUpperCase()}${attrs.pending ? ` - ${attrs.pending} pending` : ""}${attrs.reallocated ? `, ${attrs.reallocated} reallocated` : ""}`
+      : `S.M.A.R.T. attributes captured`,
   };
 }
 
@@ -285,9 +293,11 @@ export function parseDetectionOutput(text, os) {
 
   // Auto-detect format. Honour the active OS first, but fall back to sniffing
   // if the user pastes Linux output while on the Windows tab.
-  const looksPS = /(?:DeviceId|Number)\s*:/i.test(t) && /FriendlyName\s*:/i.test(t);
+  const looksPS =
+    /(?:DeviceId|Number)\s*:/i.test(t) && /FriendlyName\s*:/i.test(t);
   const looksLsblk = /^\s*NAME\b.*\bMODEL\b/im.test(t);
-  const looksDiskutil = /\/dev\/disk\d+/i.test(t) || /Device Identifier:/i.test(t);
+  const looksDiskutil =
+    /\/dev\/disk\d+/i.test(t) || /Device Identifier:/i.test(t);
 
   let format = null;
   let records = [];

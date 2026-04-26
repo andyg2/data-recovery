@@ -29,14 +29,23 @@ export const knowledge = {
           "Head-stack swaps on irreplaceable data. Helium drives.",
         body: "Build a positive-pressure box about 3 ft wide x 2 ft deep x 2 ft tall, open on the operator-facing side. Mount the HEPA filter on the back wall with the fan pulling room air through it. Air flows out toward you, creating positive pressure in the working volume. Seal all seams with foil HVAC tape. Avoid recirculating air purifiers as the primary filter - they are not designed for laminar flow across an open work surface. Avoid carbon pre-filters that shed dust.",
         parts: [
-          { name: "20x20x4 inch true-HEPA filter (MERV 17 / H13)", cost_usd: "40-70" },
+          {
+            name: "20x20x4 inch true-HEPA filter (MERV 17 / H13)",
+            cost_usd: "40-70",
+          },
           { name: "20-inch box fan with adjustable speed", cost_usd: "25-40" },
-          { name: "4-mil clear polyethylene sheeting (10x25 ft roll)", cost_usd: "20" },
+          {
+            name: "4-mil clear polyethylene sheeting (10x25 ft roll)",
+            cost_usd: "20",
+          },
           {
             name: "PVC pipe frame (1/2 inch with elbows/tees) or 2x2 lumber",
             cost_usd: "25-35",
           },
-          { name: "Foil HVAC tape and weatherstripping for sealing", cost_usd: "15" },
+          {
+            name: "Foil HVAC tape and weatherstripping for sealing",
+            cost_usd: "15",
+          },
         ],
       },
       {
@@ -48,9 +57,15 @@ export const knowledge = {
         not_suitable_for: "Helium drives (regardless of cleanliness).",
         body: "AC4000F-style benchtop clones from Chinese sellers (Alibaba, AliExpress) run roughly $400-900. Larger Airtech, Esco, or NuAire used units appear on eBay at $800-2000. Look for: H13 or H14 HEPA (NOT 'HEPA-type'), variable-speed blower, stainless or coated-steel work surface, gauge or indicator for filter loading. Avoid units sold without filter specs. Validation: rent or borrow a particle counter for one session - Temtop M2000 (~$200 to buy) or higher-end Lighthouse (rental ~$50-100/day) confirms ISO 5 with the blower running.",
         parts: [
-          { name: "AC4000F-style hardshell cabinet (Chinese clone)", cost_usd: "400-900" },
+          {
+            name: "AC4000F-style hardshell cabinet (Chinese clone)",
+            cost_usd: "400-900",
+          },
           { name: "Used Airtech / Esco / NuAire (eBay)", cost_usd: "800-2000" },
-          { name: "Particle counter for validation", cost_usd: "200 (buy) / 50-100 per day (rent)" },
+          {
+            name: "Particle counter for validation",
+            cost_usd: "200 (buy) / 50-100 per day (rent)",
+          },
         ],
       },
       {
@@ -59,9 +74,15 @@ export const knowledge = {
         cost: "~$85-130 starter",
         body: "Wear all of these even with Tier 1. Skin oils and clothing fibers are the worst contamination sources.",
         parts: [
-          { name: "Nitrile gloves, powder-free, box of 100", cost_usd: "10-15" },
+          {
+            name: "Nitrile gloves, powder-free, box of 100",
+            cost_usd: "10-15",
+          },
           { name: "Bouffant hairnets, pack of 100", cost_usd: "8" },
-          { name: "Disposable cleanroom smock or Tyvek coverall", cost_usd: "10-25 each" },
+          {
+            name: "Disposable cleanroom smock or Tyvek coverall",
+            cost_usd: "10-25 each",
+          },
           {
             name: "Lint-free polyester wipes (Texwipe TX609 equivalent)",
             cost_usd: "20-30",
@@ -70,7 +91,10 @@ export const knowledge = {
             name: "ESD wrist strap with 1MOhm cord (NOT the $2 ones)",
             cost_usd: "10-15",
           },
-          { name: "ESD anti-static mat with grounding cord", cost_usd: "25-40" },
+          {
+            name: "ESD anti-static mat with grounding cord",
+            cost_usd: "25-40",
+          },
         ],
       },
       {
@@ -146,8 +170,14 @@ export const knowledge = {
             name: "USB-to-TTL serial cable (FTDI or PL2303 with 3.3V level)",
             cost_usd: "8-15",
           },
-          { name: "Hot air rework station (858D or 8586 clone)", cost_usd: "80-130" },
-          { name: "Bench multimeter (Uni-T UT139C or similar)", cost_usd: "50-80" },
+          {
+            name: "Hot air rework station (858D or 8586 clone)",
+            cost_usd: "80-130",
+          },
+          {
+            name: "Bench multimeter (Uni-T UT139C or similar)",
+            cost_usd: "50-80",
+          },
           {
             name: "Wiha or Wera Torx set (T6, T7, T8, T9, T10) - DO NOT cheap out",
             cost_usd: "30-50",
@@ -159,7 +189,10 @@ export const knowledge = {
         title: "Consumables",
         body: "Replenish regularly. Don't reuse swabs.",
         parts: [
-          { name: "Cleanroom swabs (Texwipe TX714A equivalent)", cost_usd: "20" },
+          {
+            name: "Cleanroom swabs (Texwipe TX714A equivalent)",
+            cost_usd: "20",
+          },
           { name: "Isopropyl alcohol 99%, 16oz", cost_usd: "10" },
           { name: "Fine-tip flux pen", cost_usd: "8" },
           { name: "0.5mm leaded solder", cost_usd: "10" },

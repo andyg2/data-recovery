@@ -516,7 +516,8 @@ export const tests = [
       },
       {
         id: "power_loss_during_write",
-        label: "Sudden power loss during a heavy write (file copy, large download)",
+        label:
+          "Sudden power loss during a heavy write (file copy, large download)",
         eliminates: [
           "stiction_seized_motor",
           "platter_damage",
@@ -530,7 +531,8 @@ export const tests = [
       },
       {
         id: "wrong_adapter",
-        label: "Wrong barrel-jack adapter, reverse polarity, or low-power USB hub",
+        label:
+          "Wrong barrel-jack adapter, reverse polarity, or low-power USB hub",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -866,7 +868,8 @@ export const tests = [
       },
       {
         id: "ids_but_random",
-        label: "External drive - identifies on direct SATA but data is unreadable random noise",
+        label:
+          "External drive - identifies on direct SATA but data is unreadable random noise",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -903,7 +906,8 @@ export const tests = [
     answers: [
       {
         id: "normal_filesystem",
-        label: "Normal filesystem signature (NTFS, FAT, ext, HFS+, APFS, exFAT)",
+        label:
+          "Normal filesystem signature (NTFS, FAT, ext, HFS+, APFS, exFAT)",
         eliminates: [
           "encrypted_bridge_keyloss",
           "host_software_encryption",
@@ -1007,7 +1011,8 @@ export const tests = [
       },
       {
         id: "raid_or_lvm",
-        label: "RAID metadata, LVM 'LABELONE', ZFS, or other non-standard structure",
+        label:
+          "RAID metadata, LVM 'LABELONE', ZFS, or other non-standard structure",
         eliminates: [
           "logical_corruption",
           "host_software_encryption",
@@ -1018,7 +1023,8 @@ export const tests = [
       },
       {
         id: "uniform_random",
-        label: "Uniform high-entropy random data, no recognizable structure anywhere sampled",
+        label:
+          "Uniform high-entropy random data, no recognizable structure anywhere sampled",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1065,7 +1071,8 @@ export const tests = [
       },
       {
         id: "round_limit",
-        label: "Reports a round limit (137GB / 2.0TB / 2.2TB) on the original host but the right size on a modern host",
+        label:
+          "Reports a round limit (137GB / 2.0TB / 2.2TB) on the original host but the right size on a modern host",
         eliminates: [
           "hpa_dco_misconfigured",
           "firmware_sa_corruption",
@@ -1122,7 +1129,8 @@ export const tests = [
       },
       {
         id: "suspect_counterfeit",
-        label: "Suspect counterfeit - cheap marketplace, weight wrong, model not on manufacturer's site",
+        label:
+          "Suspect counterfeit - cheap marketplace, weight wrong, model not on manufacturer's site",
         eliminates: [
           "sshd_cache_failure",
           "smr_write_zone_corruption",
@@ -1135,8 +1143,7 @@ export const tests = [
   {
     id: "temperature_correlation",
     phase: "shop",
-    question:
-      "Does the drive's behaviour clearly change with temperature?",
+    question: "Does the drive's behaviour clearly change with temperature?",
     detail:
       "Cool the drive in a sealed bag in the fridge for 30 minutes (do NOT freezer - condensation), or warm it on a 30-35C seedling mat. Note whether reads succeed or fail in each state. Strong correlation = thermal-window failure.",
     risk: "medium",
@@ -1217,7 +1224,8 @@ export const tests = [
       },
       {
         id: "slow_recal",
-        label: "Slow rhythmic seek (~1 every 8-30 seconds), drive may eventually ID",
+        label:
+          "Slow rhythmic seek (~1 every 8-30 seconds), drive may eventually ID",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1257,7 +1265,8 @@ export const tests = [
       },
       {
         id: "irregular_oscillating",
-        label: "Irregular: overshoot, oscillation, hunting (not rhythmic at all)",
+        label:
+          "Irregular: overshoot, oscillation, hunting (not rhythmic at all)",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1374,7 +1383,8 @@ export const tests = [
       },
       {
         id: "striped_pattern",
-        label: "Repeating bands - good band, fail band, good, fail (regular size)",
+        label:
+          "Repeating bands - good band, fail band, good, fail (regular size)",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",
@@ -1510,10 +1520,7 @@ export const tests = [
       {
         id: "consistent_behaviour",
         label: "No - behaviour is consistent regardless of tapping/thermal",
-        eliminates: [
-          "head_flex_cable_damage",
-          "thermal_dependent_failure",
-        ],
+        eliminates: ["head_flex_cable_damage", "thermal_dependent_failure"],
       },
     ],
   },
@@ -1569,7 +1576,8 @@ export const tests = [
       },
       {
         id: "fails_past_threshold",
-        label: "Verifies up to a threshold (e.g. first 30 GB of a '4 TB' drive), then garbage",
+        label:
+          "Verifies up to a threshold (e.g. first 30 GB of a '4 TB' drive), then garbage",
         eliminates: [
           "logical_corruption",
           "bad_sectors_minor",

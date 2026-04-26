@@ -106,11 +106,7 @@ export const actions = [
     id: "image_once_then_stop",
     label: "Single fast clone, then stop powering the drive",
     severity: "shop",
-    triggers: [
-      "glist_overflow",
-      "head_crash_drop_event",
-      "helium_leak",
-    ],
+    triggers: ["glist_overflow", "head_crash_drop_event", "helium_leak"],
     detail:
       "These modes get progressively worse with every spin. Run ddrescue with `--no-scrape -d -n` for one fast pass. No retries, no second attempts on the original. Recover from the image afterwards.",
   },
@@ -118,10 +114,7 @@ export const actions = [
     id: "lab_pc3000",
     label: "Send to a lab with PC-3000 for translator/firmware regeneration",
     severity: "lab",
-    triggers: [
-      "translator_corruption",
-      "firmware_sa_corruption",
-    ],
+    triggers: ["translator_corruption", "firmware_sa_corruption"],
     detail:
       "Translator regeneration requires PC-3000 or MRT with the family-specific module. Not DIY at present. Bag the drive, document the symptoms, ship.",
   },
@@ -171,7 +164,8 @@ export const actions = [
 
   {
     id: "shuck_external",
-    label: "Shuck the external enclosure and connect the bare drive directly to SATA",
+    label:
+      "Shuck the external enclosure and connect the bare drive directly to SATA",
     severity: "diy",
     triggers: ["usb_bridge_failure", "external_power_misadventure"],
     detail:
@@ -180,7 +174,8 @@ export const actions = [
   },
   {
     id: "transplant_bridge_flash",
-    label: "Transplant the encryption-bridge serial flash to a same-firmware donor",
+    label:
+      "Transplant the encryption-bridge serial flash to a same-firmware donor",
     severity: "shop",
     triggers: ["encrypted_bridge_keyloss"],
     detail:
@@ -198,7 +193,8 @@ export const actions = [
   },
   {
     id: "use_modern_host",
-    label: "Move the drive to a modern UEFI host with a current SATA/USB3 controller",
+    label:
+      "Move the drive to a modern UEFI host with a current SATA/USB3 controller",
     severity: "diy",
     triggers: ["capacity_barrier_host"],
     detail:
@@ -210,7 +206,7 @@ export const actions = [
     severity: "diy",
     triggers: ["external_power_misadventure"],
     detail:
-      "Verify the barrel-jack adapter is the correct voltage AND polarity (multimeter). Most 3.5\" external drives need 12V 2A center-positive 5.5x2.5mm. For 2.5\" bus-powered drives use a powered USB3 hub, a Y-cable into two ports, or a port that can supply at least 900mA. If the original wrong adapter killed the bridge, shuck and connect via SATA.",
+      'Verify the barrel-jack adapter is the correct voltage AND polarity (multimeter). Most 3.5" external drives need 12V 2A center-positive 5.5x2.5mm. For 2.5" bus-powered drives use a powered USB3 hub, a Y-cable into two ports, or a port that can supply at least 900mA. If the original wrong adapter killed the bridge, shuck and connect via SATA.',
   },
   {
     id: "platform_shift_recognise_format",
@@ -273,7 +269,8 @@ export const actions = [
   },
   {
     id: "image_then_partial_recover",
-    label: "Image the working heads first; decide on HSA swap for the dead surfaces afterwards",
+    label:
+      "Image the working heads first; decide on HSA swap for the dead surfaces afterwards",
     severity: "shop",
     triggers: ["partial_head_failure"],
     detail:

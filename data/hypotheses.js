@@ -311,7 +311,7 @@ export const hypotheses = [
     id: "external_power_misadventure",
     name: "Wrong-polarity adapter or insufficient USB power",
     description:
-      "External 3.5\" drives killed by the wrong 12V adapter (different drive, router PSU, reversed polarity). Bus-powered 2.5\" drives spinning down on a passive USB hub or low-current laptop port. Often the bridge takes the hit before the drive does, so shucking and direct SATA still works.",
+      'External 3.5" drives killed by the wrong 12V adapter (different drive, router PSU, reversed polarity). Bus-powered 2.5" drives spinning down on a passive USB hub or low-current laptop port. Often the bridge takes the hit before the drive does, so shucking and direct SATA still works.',
     severity: "diy",
     phase: "shop",
   },

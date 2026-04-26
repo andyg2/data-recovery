@@ -642,7 +642,8 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "Inspect PCB for: scorched components, residue, swollen caps, green oxidation.",
+            label:
+              "Inspect PCB for: scorched components, residue, swollen caps, green oxidation.",
             command: "# Visual step - no command",
             requires: [],
           },
@@ -706,7 +707,8 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "Probe across each diode in continuity mode. A short = beep / under 5 ohms. Healthy = open in both directions.",
+            label:
+              "Probe across each diode in continuity mode. A short = beep / under 5 ohms. Healthy = open in both directions.",
             command: "# Hardware test - no command",
             requires: [],
           },
@@ -753,14 +755,22 @@ export const procedures = {
 
   // -------------------------------------------------------------------------
   security_check: {
-    prerequisites: ["Drive identifies in BIOS/OS.", "Linux live USB or Victoria/HDD Sentinel on Windows."],
+    prerequisites: [
+      "Drive identifies in BIOS/OS.",
+      "Linux live USB or Victoria/HDD Sentinel on Windows.",
+    ],
     os: {
       windows: {
         shell: "PowerShell or Linux live USB",
-        tools: ["Victoria for Windows", "HDD Sentinel", "or use a Linux live USB with hdparm"],
+        tools: [
+          "Victoria for Windows",
+          "HDD Sentinel",
+          "or use a Linux live USB with hdparm",
+        ],
         steps: [
           {
-            label: "Open Victoria, select the drive, look at the SMART/Security tab. Note: enabled / locked / frozen flags.",
+            label:
+              "Open Victoria, select the drive, look at the SMART/Security tab. Note: enabled / locked / frozen flags.",
             command: "# GUI step - run Victoria",
             requires: [],
           },
@@ -787,7 +797,8 @@ export const procedures = {
         tools: ["Linux live USB recommended"],
         steps: [
           {
-            label: "macOS doesn't expose ATA security via diskutil. Boot Linux from USB and use hdparm.",
+            label:
+              "macOS doesn't expose ATA security via diskutil. Boot Linux from USB and use hdparm.",
             command: "# Boot Linux live USB",
             requires: [],
           },
@@ -802,7 +813,10 @@ export const procedures = {
 
   // -------------------------------------------------------------------------
   capacity_check: {
-    prerequisites: ["Drive identifies in OS or via BIOS.", "Know the model's spec (label or datasheet)."],
+    prerequisites: [
+      "Drive identifies in OS or via BIOS.",
+      "Know the model's spec (label or datasheet).",
+    ],
     os: {
       windows: {
         shell: "PowerShell (Admin)",
@@ -814,7 +828,8 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "Compare against the printed label (e.g. 1 TB = 1,000,204,886,016 bytes).",
+            label:
+              "Compare against the printed label (e.g. 1 TB = 1,000,204,886,016 bytes).",
             command: "# Manual comparison",
             requires: [],
           },
@@ -831,7 +846,8 @@ export const procedures = {
           },
           {
             label: "Read the user-addressable capacity.",
-            command: "sudo hdparm -I ${DEVICE} | grep -E '(device size|number of)'",
+            command:
+              "sudo hdparm -I ${DEVICE} | grep -E '(device size|number of)'",
             requires: ["DEVICE"],
           },
         ],
@@ -842,7 +858,8 @@ export const procedures = {
         steps: [
           {
             label: "Read OS-reported size.",
-            command: "diskutil info ${DEVICE} | grep -E '(Disk Size|Total Size)'",
+            command:
+              "diskutil info ${DEVICE} | grep -E '(Disk Size|Total Size)'",
             requires: ["DEVICE"],
           },
         ],
@@ -871,7 +888,8 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "Or open ${DEVICE} in HxD as a physical disk and read the first sector.",
+            label:
+              "Or open ${DEVICE} in HxD as a physical disk and read the first sector.",
             command: "# GUI: HxD -> Open disk -> Physical disks -> ${MODEL}",
             requires: ["MODEL"],
           },
@@ -883,12 +901,15 @@ export const procedures = {
         steps: [
           {
             label: "Read first physical sector.",
-            command: "sudo dd if=${DEVICE} of=/dev/null bs=512 count=1 status=progress",
+            command:
+              "sudo dd if=${DEVICE} of=/dev/null bs=512 count=1 status=progress",
             requires: ["DEVICE"],
           },
           {
-            label: "View the bytes (looking for boot signature 55 AA at offset 510 if MBR).",
-            command: "sudo dd if=${DEVICE} bs=512 count=1 2>/dev/null | xxd | head",
+            label:
+              "View the bytes (looking for boot signature 55 AA at offset 510 if MBR).",
+            command:
+              "sudo dd if=${DEVICE} bs=512 count=1 2>/dev/null | xxd | head",
             requires: ["DEVICE"],
           },
         ],
@@ -899,7 +920,8 @@ export const procedures = {
         steps: [
           {
             label: "Unmount and read first sector.",
-            command: "diskutil unmountDisk ${DEVICE} && sudo dd if=${DEVICE} bs=512 count=1 | xxd | head",
+            command:
+              "diskutil unmountDisk ${DEVICE} && sudo dd if=${DEVICE} bs=512 count=1 | xxd | head",
             requires: ["DEVICE"],
           },
         ],
@@ -950,7 +972,8 @@ export const procedures = {
         ],
       },
     },
-    expectedOutput: "Soft single seek. Then mostly silent except for occasional re-cal seeks.",
+    expectedOutput:
+      "Soft single seek. Then mostly silent except for occasional re-cal seeks.",
     interpretation:
       "Total silence after a healthy spin = actuator coil is open. Repeated retry-clicks = head fault. Normal seek = mechanism is alive.",
   },
@@ -964,13 +987,14 @@ export const procedures = {
         tools: ["smartmontools"],
         steps: [
           {
-            label: "Confirm the model is helium-filled (look up datasheet, or label code 'He', 'Helio', WD Ultrastar, Seagate Exos).",
+            label:
+              "Confirm the model is helium-filled (look up datasheet, or label code 'He', 'Helio', WD Ultrastar, Seagate Exos).",
             command: "# Look up ${MODEL} datasheet",
             requires: ["MODEL"],
           },
           {
             label: "Read SMART attribute 22 (Helium_Level).",
-            command: "smartctl -a ${DEVICE} | findstr /R \"^ *22 \"",
+            command: 'smartctl -a ${DEVICE} | findstr /R "^ *22 "',
             requires: ["DEVICE"],
           },
         ],
@@ -1017,22 +1041,26 @@ export const procedures = {
         tools: ["CH341A driver", "NeoProgrammer", "SOIC-8 clip"],
         steps: [
           {
-            label: "Identify the 8-pin SOIC ROM on the original PCB (usually next to the controller, marked 25xx).",
+            label:
+              "Identify the 8-pin SOIC ROM on the original PCB (usually next to the controller, marked 25xx).",
             command: "# Hardware identification",
             requires: [],
           },
           {
-            label: "Clip the CH341A onto the original ROM. Read 3 times in NeoProgrammer; verify all dumps are byte-identical. Save as patient_rom.bin.",
+            label:
+              "Clip the CH341A onto the original ROM. Read 3 times in NeoProgrammer; verify all dumps are byte-identical. Save as patient_rom.bin.",
             command: "# NeoProgrammer GUI",
             requires: [],
           },
           {
-            label: "Clip onto the donor PCB's ROM. Save donor_original.bin (in case you need to roll back). Erase, write patient_rom.bin, verify.",
+            label:
+              "Clip onto the donor PCB's ROM. Save donor_original.bin (in case you need to roll back). Erase, write patient_rom.bin, verify.",
             command: "# NeoProgrammer GUI",
             requires: [],
           },
           {
-            label: "Mount donor PCB on patient drive. Power on, retest detection.",
+            label:
+              "Mount donor PCB on patient drive. Power on, retest detection.",
             command: "Get-PhysicalDisk | Select FriendlyName,SerialNumber,Size",
             requires: [],
           },
@@ -1069,7 +1097,8 @@ export const procedures = {
         tools: ["use a Windows or Linux host for flashrom"],
         steps: [
           {
-            label: "Run the ROM transfer on a Linux/Windows machine. After fitting:",
+            label:
+              "Run the ROM transfer on a Linux/Windows machine. After fitting:",
             command: "diskutil list",
             requires: [],
           },
@@ -1101,8 +1130,10 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "Connect the bare drive to a desktop SATA port (or a different USB-SATA dock).",
-            command: "Get-PhysicalDisk | Select FriendlyName,SerialNumber,Size,HealthStatus",
+            label:
+              "Connect the bare drive to a desktop SATA port (or a different USB-SATA dock).",
+            command:
+              "Get-PhysicalDisk | Select FriendlyName,SerialNumber,Size,HealthStatus",
             requires: [],
           },
         ],
@@ -1143,21 +1174,26 @@ export const procedures = {
 
   // -------------------------------------------------------------------------
   data_signature: {
-    prerequisites: ["Drive identifies and reads succeed.", "Drive is unmounted (read-only is fine; do not let the OS auto-mount)."],
+    prerequisites: [
+      "Drive identifies and reads succeed.",
+      "Drive is unmounted (read-only is fine; do not let the OS auto-mount).",
+    ],
     os: {
       windows: {
         shell: "PowerShell (Admin) or HxD",
         tools: ["HxD physical disk view, or WSL with xxd/dd"],
         steps: [
           {
-            label: "Read the first 16 MB and look at offsets 0, 0x200 (LBA1), 0x10000.",
+            label:
+              "Read the first 16 MB and look at offsets 0, 0x200 (LBA1), 0x10000.",
             command:
               "wsl bash -c 'sudo dd if=${DEVICE} bs=1M count=16 status=none | xxd | head -200'",
             requires: ["DEVICE"],
           },
           {
             label: "Or open ${DEVICE} in HxD as a physical disk.",
-            command: "# HxD: File -> Open disk -> Physical disks -> select drive",
+            command:
+              "# HxD: File -> Open disk -> Physical disks -> select drive",
             requires: [],
           },
         ],
@@ -1168,7 +1204,8 @@ export const procedures = {
         steps: [
           {
             label: "Hex dump the first MB.",
-            command: "sudo dd if=${DEVICE} bs=1M count=1 status=none | xxd | head -200",
+            command:
+              "sudo dd if=${DEVICE} bs=1M count=1 status=none | xxd | head -200",
             requires: ["DEVICE"],
           },
           {
@@ -1178,7 +1215,8 @@ export const procedures = {
             requires: ["DEVICE"],
           },
           {
-            label: "Compute entropy of the first 100 MB - high entropy = encryption or random.",
+            label:
+              "Compute entropy of the first 100 MB - high entropy = encryption or random.",
             command: "sudo dd if=${DEVICE} bs=1M count=100 status=none | ent",
             requires: ["DEVICE"],
           },
@@ -1227,7 +1265,8 @@ export const procedures = {
         steps: [
           {
             label: "Read advertised and native capacity.",
-            command: "sudo hdparm -I ${DEVICE} | grep -E 'device size|number of sectors'",
+            command:
+              "sudo hdparm -I ${DEVICE} | grep -E 'device size|number of sectors'",
             requires: ["DEVICE"],
           },
           {
@@ -1269,7 +1308,7 @@ export const procedures = {
           {
             label: "Read model and rotation/cache attributes.",
             command:
-              "smartctl -i ${DEVICE} | findstr /R \"Model Capacity Rotation\"",
+              'smartctl -i ${DEVICE} | findstr /R "Model Capacity Rotation"',
             requires: ["DEVICE"],
           },
           {
@@ -1441,7 +1480,8 @@ export const procedures = {
         tools: ["WSL with smartctl + dd"],
         steps: [
           {
-            label: "Try a raw read of the first sector first (skips kernel SMART probe).",
+            label:
+              "Try a raw read of the first sector first (skips kernel SMART probe).",
             command:
               "wsl bash -c 'sudo dd if=/dev/sdX of=/dev/null bs=512 count=1 status=progress'",
             requires: [],
@@ -1522,12 +1562,13 @@ export const procedures = {
           {
             label: "Sample at five offsets.",
             command:
-              "for pct in 0 25 50 75 99; do echo \"--- ${pct}% ---\"; sudo dd if=${DEVICE} of=/dev/null bs=1M count=64 skip=$(($(blockdev --getsize64 ${DEVICE})/1048576*$pct/100)) status=progress; done",
+              'for pct in 0 25 50 75 99; do echo "--- ${pct}% ---"; sudo dd if=${DEVICE} of=/dev/null bs=1M count=64 skip=$(($(blockdev --getsize64 ${DEVICE})/1048576*$pct/100)) status=progress; done',
             requires: ["DEVICE"],
           },
           {
             label: "Watch SMART for event growth during the test.",
-            command: "sudo smartctl -A ${DEVICE} | grep -E 'Reallocated|Pending|Uncorrect'",
+            command:
+              "sudo smartctl -A ${DEVICE} | grep -E 'Reallocated|Pending|Uncorrect'",
             requires: ["DEVICE"],
           },
         ],
@@ -1628,7 +1669,8 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "Measure resistance pad-to-pad. Healthy: 4-20 ohms (drive-family dependent).",
+            label:
+              "Measure resistance pad-to-pad. Healthy: 4-20 ohms (drive-family dependent).",
             command: "# Hardware - read multimeter",
             requires: [],
           },
@@ -1700,7 +1742,8 @@ export const procedures = {
         steps: [
           {
             label: "Loop reads while tapping.",
-            command: "while true; do sudo dd if=${DEVICE} of=/dev/null bs=4k count=10 2>&1 | grep -i error; sleep 0.5; done",
+            command:
+              "while true; do sudo dd if=${DEVICE} of=/dev/null bs=4k count=10 2>&1 | grep -i error; sleep 0.5; done",
             requires: ["DEVICE"],
           },
         ],
@@ -1711,7 +1754,8 @@ export const procedures = {
         steps: [
           {
             label: "Same loop technique.",
-            command: "while true; do sudo dd if=${DEVICE} of=/dev/null bs=4k count=10; sleep 0.5; done",
+            command:
+              "while true; do sudo dd if=${DEVICE} of=/dev/null bs=4k count=10; sleep 0.5; done",
             requires: ["DEVICE"],
           },
         ],
@@ -1742,8 +1786,10 @@ export const procedures = {
             requires: [],
           },
           {
-            label: "After idle period, attempt a sequential read to confirm responsiveness.",
-            command: "wsl sudo dd if=/dev/sdX of=/dev/null bs=1M count=1024 status=progress",
+            label:
+              "After idle period, attempt a sequential read to confirm responsiveness.",
+            command:
+              "wsl sudo dd if=/dev/sdX of=/dev/null bs=1M count=1024 status=progress",
             requires: [],
           },
         ],
@@ -1759,7 +1805,8 @@ export const procedures = {
           },
           {
             label: "Confirm responsiveness.",
-            command: "sudo dd if=${DEVICE} of=/dev/null bs=1M count=1024 status=progress",
+            command:
+              "sudo dd if=${DEVICE} of=/dev/null bs=1M count=1024 status=progress",
             requires: ["DEVICE"],
           },
         ],
